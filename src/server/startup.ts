@@ -29,3 +29,28 @@ export function loadPacksWithWarnings(): Pack[] {
   }
   return packs;
 }
+
+/**
+ * Reads MOCKROOM_FOLLOW_UPS, the most follow-up questions the interviewer asks
+ * on one question (0 turns them off). Undefined when unset, so the default applies.
+ */
+export function followUpsPerQuestionFromEnv(env: Record<string, string | undefined>): number | undefined {
+  const value = env.MOCKROOM_FOLLOW_UPS?.trim();
+  if (!value) return undefined;
+  if (!/^\d+$/.test(value)) {
+    throw new Error(
+      `MOCKROOM_FOLLOW_UPS is "${env.MOCKROOM_FOLLOW_UPS}". Use a whole number, such as 2, or 0 to turn follow-ups off.`,
+    );
+  }
+  return Number(value);
+}
+
+/** Reads the follow-up setting from the environment. Exits when it is wrong. */
+export function loadFollowUpsOrExit(): number | undefined {
+  try {
+    return followUpsPerQuestionFromEnv(process.env);
+  } catch (error) {
+    console.error(error instanceof Error ? error.message : error);
+    process.exit(1);
+  }
+}

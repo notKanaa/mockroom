@@ -1,6 +1,6 @@
 // Public shapes of an interview. Pure types: the UI imports them too.
 
-/** setup → asking (question 1 … N) → finished */
+/** setup → asking (question 1 … N, each with optional follow-ups) → finished */
 export type InterviewStatus = "setup" | "asking" | "finished";
 
 export interface InterviewSummary {
@@ -9,12 +9,21 @@ export interface InterviewSummary {
   status: InterviewStatus;
   /** The question being asked, from 1. 0 during setup; the last question's number once finished. */
   questionNumber: number;
+  /**
+   * 0 while the main question is being asked, then 1, 2… while the interviewer
+   * follows up on it. Follow-ups don't count as questions.
+   */
+  followUpNumber: number;
   totalQuestions: number;
 }
 
 export interface TranscriptEntry {
   role: "interviewer" | "candidate";
   content: string;
+  /** The main question this message belongs to, from 1. Absent on the interviewer's closing message. */
+  questionNumber?: number;
+  /** On an interviewer's follow-up question: which follow-up on the main question it is, from 1. */
+  followUpNumber?: number;
 }
 
 export interface InterviewDetails extends InterviewSummary {

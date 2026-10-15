@@ -3,7 +3,7 @@ import { Hono, type Context } from "hono";
 import type { ContentfulStatusCode } from "hono/utils/http-status";
 import { stream } from "hono/streaming";
 import { collectText, type AIModel } from "./ai/model.js";
-import type { ApiError, PackSummary, TurnEvent } from "./api-types.js";
+import type { ApiError, InterviewSummary, PackSummary, TurnEvent } from "./api-types.js";
 import { InterviewEngine, InterviewError, type InterviewErrorCode, type InterviewTurn } from "./interview/engine.js";
 import { filterPacks } from "./packs/library.js";
 import type { Pack } from "./packs/pack.js";
@@ -14,6 +14,8 @@ export interface AppOptions {
   packs: readonly Pack[];
   /** Folder holding the built UI. Omitted in dev mode, where Vite serves the UI. */
   uiDir?: string;
+  /** The most follow-up questions the interviewer asks on one main question. Defaults to 2; 0 turns them off. */
+  followUpsPerQuestion?: number;
 }
 
 const statusByErrorCode: Record<InterviewErrorCode, ContentfulStatusCode> = {
@@ -25,9 +27,9 @@ const statusByErrorCode: Record<InterviewErrorCode, ContentfulStatusCode> = {
   "debrief-failed": 502,
 };
 
-export function createApp({ model, packs, uiDir }: AppOptions): Hono {
+export function createApp({ model, packs, uiDir, followUpsPerQuestion }: AppOptions): Hono {
   const app = new Hono();
-  const engine = new InterviewEngine(model);
+  const engine = new InterviewEngine(model, { followUpsPerQuestion });
 
   app.get("/api/health", (c) => c.json({ name: "Mockroom", status: "ok" }));
 
@@ -100,14 +102,15 @@ function streamTurn(c: Context, turn: InterviewTurn): Response {
   c.header("Cache-Control", "no-cache");
   return stream(c, async (out) => {
     const send = (event: TurnEvent) => out.write(`${JSON.stringify(event)}\n`);
-    await send({ type: "interview", interview: turn.interview });
+    let interview: InterviewSummary | undefined;
     try {
-      for await (const text of turn.reply) {
+      for await (const update of turn) {
         // Leaving the loop abandons the turn, so a candidate who closed the page can answer again.
         if (out.aborted) return;
-        await send({ type: "delta", text });
+        if (update.type === "interview") interview = update.interview;
+        await send(update);
       }
-      await send({ type: "done", interview: turn.interview });
+      if (interview) await send({ type: "done", interview });
     } catch (error) {
       await send({ type: "error", message: errorMessage(error) });
     }

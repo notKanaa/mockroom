@@ -46,7 +46,10 @@ export function InterviewRoom({ session }: InterviewRoomProps) {
     if (confirmed) void session.end();
   }
 
-  const { questionNumber, totalQuestions } = interview;
+  const { questionNumber, followUpNumber, totalQuestions } = interview;
+  const progress = finished
+    ? "Interview complete"
+    : `Question ${questionNumber} of ${totalQuestions}${followUpNumber > 0 ? ` · Follow-up ${followUpNumber}` : ""}`;
 
   return (
     <main className="room">
@@ -55,7 +58,7 @@ export function InterviewRoom({ session }: InterviewRoomProps) {
           <div>
             <p className="room-pack">{interview.pack.title}</p>
             <p className="room-progress" aria-live="polite">
-              {finished ? "Interview complete" : `Question ${questionNumber} of ${totalQuestions}`}
+              {progress}
             </p>
           </div>
           {!finished && (
@@ -86,6 +89,7 @@ export function InterviewRoom({ session }: InterviewRoomProps) {
             <li key={index} className={`message message-${message.role}`}>
               <span className="message-author">
                 {message.role === "interviewer" ? "Interviewer" : "You"}
+                {message.followUpNumber !== undefined && <span className="message-tag">Follow-up</span>}
               </span>
               <p className={isTyping ? "message-text typing" : "message-text"}>{message.content}</p>
             </li>

@@ -26,8 +26,10 @@ export interface PackSummary {
 
 /**
  * One line of an interviewer turn, streamed as newline-delimited JSON:
- * `interview` first (where the interview will stand), then `delta`s, then `done` or `error`.
- * After an `error`, the interview is unchanged and the answer can be sent again.
+ * `interview` first (where the interview will stand, once the interviewer has
+ * decided whether to follow up), then `delta`s, then `done`. An `error` can come
+ * at any point, even first, and ends the turn: the interview is then unchanged
+ * and the answer can be sent again.
  */
 export type TurnEvent =
   | { type: "interview"; interview: InterviewSummary }

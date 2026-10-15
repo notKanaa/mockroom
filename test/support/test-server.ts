@@ -9,6 +9,7 @@ export interface TestServerOptions {
   /** Defaults to the packs bundled with Mockroom. */
   packs?: readonly Pack[];
   uiDir?: string;
+  followUpsPerQuestion?: number;
 }
 
 /** Starts a real Mockroom server on a free port, with a fake AI model by default. */
@@ -16,6 +17,7 @@ export function startTestServer({
   model = new ScriptedModel([]),
   packs = loadPacks().packs,
   uiDir,
+  followUpsPerQuestion,
 }: TestServerOptions = {}): Promise<RunningServer> {
-  return startServer({ model, packs, uiDir });
+  return startServer({ model, packs, uiDir, followUpsPerQuestion });
 }

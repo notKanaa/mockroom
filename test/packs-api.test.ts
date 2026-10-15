@@ -52,7 +52,8 @@ describe("Pack picker API", () => {
   });
 
   it("starts an interview from the chosen pack, with questions grounded in its themes", async () => {
-    const model = new ScriptedModel(["Bonjour ! Première question.", "Merci. Deuxième question."]);
+    // The answer is complete: the interviewer decides to move on (NEXT), then asks question 2.
+    const model = new ScriptedModel(["Bonjour ! Première question.", "NEXT", "Merci. Deuxième question."]);
     server = await startTestServer({ model, packs: fixturePacks });
     const client = new InterviewClient(server.url);
 
@@ -67,11 +68,11 @@ describe("Pack picker API", () => {
     });
     expect(second.interview).toMatchObject({ questionNumber: 2 });
 
-    const [opening, followUp] = model.calls.map((call) => call[0]!.content);
+    const [opening, , nextQuestion] = model.calls.map((call) => call[0]!.content);
     expect(opening).toContain("mid Python developer position. Conduct the interview in French.");
     expect(opening).toContain('pack, whose themes are: Générateurs, Décorateurs.');
     expect(opening).toContain(`ask question 1, on the theme "Générateurs": "Qu'est-ce qu'un générateur en Python ?"`);
-    expect(followUp).toContain('ask question 2, on the theme "Décorateurs": "À quoi sert un décorateur ?"');
+    expect(nextQuestion).toContain('ask question 2, on the theme "Décorateurs": "À quoi sert un décorateur ?"');
   });
 
   it("only offers the packs it was given", async () => {

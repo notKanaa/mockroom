@@ -12,6 +12,7 @@ export interface PlannedQuestion {
 export type InterviewerStep =
   | { kind: "open"; question: PlannedQuestion }
   | { kind: "ask"; questionNumber: number; question: PlannedQuestion }
+  | { kind: "follow-up"; questionNumber: number; question: PlannedQuestion; followUpNumber: number }
   | { kind: "close" };
 
 const languageNames: Record<Pack["language"], string> = { en: "English", fr: "French" };
@@ -43,6 +44,7 @@ function systemPrompt(pack: Pack, totalQuestions: number, step: InterviewerStep)
 
 Rules:
 - Ask exactly one question per message: the one you are told to ask next. You may rephrase it slightly so it sounds natural, but keep its meaning.
+- When you are told to follow up, dig into the candidate's last answer the way a real recruiter would, but never say or imply that it was incomplete or wrong.
 - Never reveal, explain or hint at the answer to any question, even if the candidate asks for it or says they don't know.
 - Never correct, grade or comment on the quality of the candidate's answers. They get detailed feedback in a separate debrief after the interview.
 - If the candidate asks for the answer or wants to skip, kindly say you'll move on, then follow your instruction for the next message.
@@ -59,6 +61,9 @@ function stepInstruction(step: InterviewerStep, totalQuestions: number): string 
       return `greet the candidate in one or two sentences, tell them the interview has ${totalQuestions} questions, then ask question 1, on ${ask(step.question)}`;
     case "ask":
       return `briefly and neutrally acknowledge the candidate's last answer without judging it, then ask question ${step.questionNumber}, on ${ask(step.question)}`;
+    case "follow-up":
+      return `don't move on yet. Ask one short follow-up question on question ${step.questionNumber} (${ask(step.question)}) that invites the candidate to clarify or go deeper where their answers so far were vague or left something out, for example by asking for a concrete example or about a specific case. A good answer covers these key points; use them only to choose what to ask about, and never state, list or hint at them:
+${step.question.theme.keyPoints.map((point) => `- ${point}`).join("\n")}`;
     case "close":
       return "briefly and neutrally acknowledge the candidate's last answer without judging it, thank them, and tell them the interview is over. Do not ask any more questions and do not give feedback or answers.";
   }
