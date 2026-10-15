@@ -3,6 +3,8 @@ import type { InterviewSummary } from "./interview/types.js";
 import type { PackLanguage, PackLevel } from "./packs/pack.js";
 
 export type {
+  Debrief,
+  DebriefQuestion,
   InterviewDetails,
   InterviewStatus,
   InterviewSummary,

@@ -1,8 +1,10 @@
 import { randomUUID } from "node:crypto";
 import type { AIModel } from "../ai/model.js";
 import type { Pack } from "../packs/pack.js";
+import { DebriefFormatError, writeDebrief } from "./debrief.js";
 import { interviewerPrompt, type InterviewerStep, type PlannedQuestion } from "./prompt.js";
 import type {
+  Debrief,
   InterviewDetails,
   InterviewStatus,
   InterviewSummary,
@@ -21,7 +23,13 @@ export interface InterviewTurn {
   reply: AsyncIterable<string>;
 }
 
-export type InterviewErrorCode = "not-found" | "finished" | "busy" | "empty-answer";
+export type InterviewErrorCode =
+  | "not-found"
+  | "finished"
+  | "busy"
+  | "empty-answer"
+  | "not-finished"
+  | "debrief-failed";
 
 export class InterviewError extends Error {
   constructor(
@@ -43,13 +51,21 @@ interface Interview {
   questions: PlannedQuestion[];
   status: InterviewStatus;
   questionNumber: number;
+  /** How many questions the candidate has answered, so far. */
+  answeredQuestions: number;
   transcript: TranscriptEntry[];
   /** True while the interviewer's reply is streaming. */
   busy: boolean;
+  /** True when the candidate ended the interview before the last question. */
+  endedEarly: boolean;
+  debrief?: Debrief;
+  /** The debrief being written, so simultaneous requests share it. */
+  writingDebrief?: Promise<Debrief>;
 }
 
 /**
- * Runs interviews: setup → asking question 1 … N → finished.
+ * Runs interviews: setup → asking question 1 … N → finished → debrief.
+ * Ending early jumps from asking to finished.
  * Interviews live in memory for now; saving them comes with the history.
  */
 export class InterviewEngine {
@@ -74,8 +90,10 @@ export class InterviewEngine {
       questions,
       status: "setup",
       questionNumber: 0,
+      answeredQuestions: 0,
       transcript: [],
       busy: false,
+      endedEarly: false,
     };
     this.#interviews.set(interview.id, interview);
 
@@ -111,9 +129,56 @@ export class InterviewEngine {
     return this.#turn(interview, transcript, step);
   }
 
+  /** Ends the interview before the last question. The debrief covers the questions answered so far. */
+  end(id: string): InterviewSummary {
+    const interview = this.#find(id);
+    if (interview.status === "finished") {
+      throw new InterviewError("finished", "This interview is already over.");
+    }
+    if (interview.busy) {
+      throw new InterviewError("busy", "The interviewer is still writing. Wait for their message.");
+    }
+    interview.status = "finished";
+    interview.endedEarly = true;
+    return summarize(interview);
+  }
+
+  /** The debrief of a finished interview. It is written by the AI model the first time it is asked for. */
+  async debrief(id: string): Promise<Debrief> {
+    const interview = this.#find(id);
+    if (interview.status !== "finished") {
+      throw new InterviewError("not-finished", "The interview isn't over yet.");
+    }
+    if (interview.debrief) return interview.debrief;
+
+    const writing = (interview.writingDebrief ??= writeDebrief(this.#model, {
+      pack: interview.pack,
+      answered: interview.questions.slice(0, interview.answeredQuestions),
+      totalQuestions: interview.questions.length,
+      transcript: interview.transcript,
+      endedEarly: interview.endedEarly,
+    }));
+    try {
+      interview.debrief = await writing;
+      return interview.debrief;
+    } catch (error) {
+      if (error instanceof DebriefFormatError) throw new InterviewError("debrief-failed", error.message);
+      throw new InterviewError(
+        "debrief-failed",
+        `The debrief couldn't be written: ${error instanceof Error ? error.message : String(error)}`,
+      );
+    } finally {
+      if (interview.writingDebrief === writing) interview.writingDebrief = undefined;
+    }
+  }
+
   get(id: string): InterviewDetails {
     const interview = this.#find(id);
-    return { ...summarize(interview), transcript: [...interview.transcript] };
+    return {
+      ...summarize(interview),
+      transcript: [...interview.transcript],
+      ...(interview.debrief && { debrief: interview.debrief }),
+    };
   }
 
   #find(id: string): Interview {
@@ -132,6 +197,8 @@ export class InterviewEngine {
       step.kind === "close"
         ? { status: "finished" as const, questionNumber: interview.questionNumber }
         : { status: "asking" as const, questionNumber: step.kind === "open" ? 1 : step.questionNumber };
+    // Every turn but the opening one follows an answer to the current question.
+    const answeredQuestions = step.kind === "open" ? 0 : interview.questionNumber;
     const messages = interviewerPrompt(interview.pack, interview.questions.length, transcript, step);
     const model = this.#model;
     interview.busy = true;
@@ -152,6 +219,7 @@ export class InterviewEngine {
           interview.transcript = [...transcript, { role: "interviewer", content: text }];
           interview.status = next.status;
           interview.questionNumber = next.questionNumber;
+          interview.answeredQuestions = answeredQuestions;
         } else {
           onFailure?.();
         }

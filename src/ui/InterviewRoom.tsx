@@ -6,7 +6,7 @@ interface InterviewRoomProps {
 }
 
 export function InterviewRoom({ session }: InterviewRoomProps) {
-  const { interview, messages, streaming, error } = session;
+  const { interview, messages, streaming, error, ending, endError, debrief } = session;
   const [draft, setDraft] = useState("");
   const chatRef = useRef<HTMLOListElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -39,16 +39,30 @@ export function InterviewRoom({ session }: InterviewRoomProps) {
     }
   }
 
+  function confirmEnd() {
+    const confirmed = window.confirm(
+      "End the interview now? You'll get a debrief of the questions you have answered so far.",
+    );
+    if (confirmed) void session.end();
+  }
+
   const { questionNumber, totalQuestions } = interview;
 
   return (
     <main className="room">
       <header className="room-header">
-        <div>
-          <p className="room-pack">{interview.pack.title}</p>
-          <p className="room-progress" aria-live="polite">
-            {finished ? "Interview complete" : `Question ${questionNumber} of ${totalQuestions}`}
-          </p>
+        <div className="room-heading">
+          <div>
+            <p className="room-pack">{interview.pack.title}</p>
+            <p className="room-progress" aria-live="polite">
+              {finished ? "Interview complete" : `Question ${questionNumber} of ${totalQuestions}`}
+            </p>
+          </div>
+          {!finished && (
+            <button type="button" className="secondary-button" onClick={confirmEnd} disabled={streaming || ending}>
+              {ending ? "Ending…" : "End interview"}
+            </button>
+          )}
         </div>
         <div
           className="progress"
@@ -84,13 +98,31 @@ export function InterviewRoom({ session }: InterviewRoomProps) {
           {error} Your answer was not sent; you can send it again.
         </p>
       )}
+      {endError && (
+        <p className="room-error" role="alert">
+          {endError} The interview is still going; you can try to end it again.
+        </p>
+      )}
 
       {finished ? (
-        <footer className="room-footer room-done">
-          <p>That's the end of the interview. Detailed feedback is coming in a later version.</p>
-          <button type="button" onClick={session.reset}>
-            Back to packs
-          </button>
+        <footer className="room-footer room-done" aria-live="polite">
+          {debrief.error ? (
+            <>
+              <p className="room-done-error" role="alert">
+                {debrief.error}
+              </p>
+              <div className="room-done-actions">
+                <button type="button" className="secondary-button" onClick={session.reset}>
+                  Back to packs
+                </button>
+                <button type="button" onClick={session.retryDebrief}>
+                  Try again
+                </button>
+              </div>
+            </>
+          ) : (
+            <p className="typing">Writing your debrief, question by question… This can take a minute.</p>
+          )}
         </footer>
       ) : (
         <form className="room-footer composer" onSubmit={submit}>

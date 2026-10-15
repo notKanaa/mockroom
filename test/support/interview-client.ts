@@ -1,4 +1,4 @@
-import type { InterviewSummary, TurnEvent } from "../../src/server/api-types.js";
+import type { Debrief, InterviewSummary, TurnEvent } from "../../src/server/api-types.js";
 
 export interface TurnResult {
   status: number;
@@ -7,6 +7,12 @@ export interface TurnResult {
   text: string;
   /** Where the interview stands at the end of the turn, from the `done` event. */
   interview?: InterviewSummary;
+  error?: string;
+}
+
+export interface JsonResult<T> {
+  status: number;
+  body?: T;
   error?: string;
 }
 
@@ -24,6 +30,21 @@ export class InterviewClient {
 
   async get(interviewId: string): Promise<Response> {
     return fetch(`${this.baseUrl}/api/interviews/${interviewId}`);
+  }
+
+  end(interviewId: string): Promise<JsonResult<InterviewSummary>> {
+    return this.#post(`/api/interviews/${interviewId}/end`);
+  }
+
+  debrief(interviewId: string): Promise<JsonResult<Debrief>> {
+    return this.#post(`/api/interviews/${interviewId}/debrief`);
+  }
+
+  async #post<T>(path: string): Promise<JsonResult<T>> {
+    const response = await fetch(`${this.baseUrl}${path}`, { method: "POST" });
+    const body = (await response.json()) as T | { error: string };
+    if (!response.ok) return { status: response.status, error: (body as { error: string }).error };
+    return { status: response.status, body: body as T };
   }
 
   async #turn(path: string, body: unknown): Promise<TurnResult> {

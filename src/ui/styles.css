@@ -171,6 +171,13 @@ button {
   white-space: nowrap;
 }
 
+.secondary-button {
+  background: none;
+  color: var(--text);
+  border: 1px solid var(--border);
+  font-weight: 500;
+}
+
 button:disabled {
   opacity: 0.5;
   cursor: default;
@@ -199,6 +206,13 @@ textarea:focus-visible {
 .room-header {
   padding: 20px 0 16px;
   border-bottom: 1px solid var(--border);
+}
+
+.room-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
 }
 
 .room-pack {
@@ -334,6 +348,107 @@ textarea:focus-visible {
   color: var(--muted);
 }
 
+.room-done .room-done-error {
+  color: var(--error);
+}
+
+.room-done-actions {
+  display: flex;
+  gap: 12px;
+}
+
+/* Debrief */
+
+.debrief {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 32px 16px 48px;
+  box-sizing: border-box;
+}
+
+.debrief-header h1 {
+  margin: 4px 0 12px;
+  font-size: 2rem;
+  letter-spacing: -0.02em;
+}
+
+.debrief-note {
+  color: var(--muted);
+}
+
+.debrief-summary {
+  font-size: 1.0625rem;
+  line-height: 1.6;
+  padding: 16px 20px;
+  border-radius: 12px;
+  background: var(--accent-soft);
+}
+
+.debrief-questions {
+  list-style: none;
+  padding: 0;
+  margin: 24px 0 0;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.feedback {
+  padding: 20px 24px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+.feedback-theme {
+  margin: 0;
+  font-size: 0.8125rem;
+  color: var(--muted);
+}
+
+.feedback-question {
+  margin: 4px 0 0;
+  font-size: 1.0625rem;
+}
+
+.feedback-section h3 {
+  margin: 16px 0 4px;
+  font-size: 0.8125rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+}
+
+.feedback-section ul {
+  margin: 0;
+  padding-left: 20px;
+}
+
+.feedback-section p {
+  margin: 0;
+}
+
+.feedback-strengths h3 {
+  color: var(--ok);
+}
+
+.feedback-answer {
+  white-space: pre-wrap;
+}
+
+.feedback a {
+  color: var(--accent);
+  font-weight: 500;
+}
+
+.debrief-footer {
+  margin-top: 24px;
+  display: flex;
+  justify-content: flex-end;
+}
+
 @media (max-width: 520px) {
   .composer-hint {
     display: none;
@@ -344,7 +459,8 @@ textarea:focus-visible {
   }
 
   .pack,
-  .room-done {
+  .room-done,
+  .room-heading {
     flex-direction: column;
     align-items: stretch;
   }
