@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import type { PackSummary } from "../server/api-types";
 import { listPacks } from "./api";
+import { DebriefView } from "./DebriefView";
 import { InterviewRoom } from "./InterviewRoom";
 import { PackPicker } from "./PackPicker";
 import { useInterview } from "./useInterview";
@@ -8,6 +9,15 @@ import { useInterview } from "./useInterview";
 export function App() {
   const session = useInterview();
 
+  if (session.interview && session.debrief.debrief) {
+    return (
+      <DebriefView
+        interview={session.interview}
+        debrief={session.debrief.debrief}
+        onDone={session.reset}
+      />
+    );
+  }
   if (session.interview) return <InterviewRoom session={session} />;
   return <Home starting={session.streaming} error={session.error} onStart={session.start} />;
 }

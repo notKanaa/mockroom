@@ -1,4 +1,4 @@
-import type { ApiError, PackSummary, TurnEvent } from "../server/api-types";
+import type { ApiError, Debrief, InterviewSummary, PackSummary, TurnEvent } from "../server/api-types";
 
 export async function listPacks(): Promise<PackSummary[]> {
   const response = await fetch("/api/packs");
@@ -12,6 +12,25 @@ export function startInterview(packId: string, onEvent: (event: TurnEvent) => vo
 
 export function sendAnswer(interviewId: string, answer: string, onEvent: (event: TurnEvent) => void) {
   return playTurn(`/api/interviews/${interviewId}/answers`, { answer }, onEvent);
+}
+
+/** Ends the interview before the last question. */
+export function endInterview(interviewId: string): Promise<InterviewSummary> {
+  return postJson(`/api/interviews/${interviewId}/end`);
+}
+
+/** The debrief of a finished interview. The first request waits for the AI model to write it. */
+export function fetchDebrief(interviewId: string): Promise<Debrief> {
+  return postJson(`/api/interviews/${interviewId}/debrief`);
+}
+
+async function postJson<T>(path: string): Promise<T> {
+  const response = await fetch(path, { method: "POST" }).catch(() => undefined);
+  const body = (await response?.json().catch(() => undefined)) as T | Partial<ApiError> | undefined;
+  if (!response?.ok) {
+    throw new Error((body as Partial<ApiError> | undefined)?.error ?? "The local server can't be reached.");
+  }
+  return body as T;
 }
 
 /** Sends a request that triggers an interviewer turn, and reports its events as they stream in. */

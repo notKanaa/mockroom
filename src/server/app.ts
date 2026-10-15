@@ -21,6 +21,8 @@ const statusByErrorCode: Record<InterviewErrorCode, ContentfulStatusCode> = {
   finished: 409,
   busy: 409,
   "empty-answer": 400,
+  "not-finished": 409,
+  "debrief-failed": 502,
 };
 
 export function createApp({ model, packs, uiDir }: AppOptions): Hono {
@@ -73,6 +75,11 @@ export function createApp({ model, packs, uiDir }: AppOptions): Hono {
     }
     return streamTurn(c, engine.answer(c.req.param("id"), answer));
   });
+
+  app.post("/api/interviews/:id/end", (c) => c.json(engine.end(c.req.param("id"))));
+
+  // Written by the AI model on the first request, then kept. Can take a while.
+  app.post("/api/interviews/:id/debrief", async (c) => c.json(await engine.debrief(c.req.param("id"))));
 
   app.onError((error, c) => {
     if (error instanceof InterviewError) {
