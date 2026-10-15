@@ -1,5 +1,7 @@
 import { randomUUID } from "node:crypto";
 import type { AIModel } from "../ai/model.js";
+import type { InterviewHistory } from "../history/store.js";
+import type { SavedInterview } from "../history/types.js";
 import type { Pack } from "../packs/pack.js";
 import { DebriefFormatError, writeDebrief } from "./debrief.js";
 import { shouldFollowUp } from "./follow-up.js";
@@ -51,6 +53,10 @@ export interface InterviewEngineOptions {
   questionsPerInterview?: number;
   /** The most follow-up questions the interviewer asks on one main question. 0 turns follow-ups off. */
   followUpsPerQuestion?: number;
+  /** Where finished interviews are saved. Without it, nothing is saved. */
+  history?: Pick<InterviewHistory, "save">;
+  /** The current time. Tests set it to get known dates. */
+  now?: () => Date;
 }
 
 const defaultFollowUpsPerQuestion = 2;
@@ -58,6 +64,9 @@ const defaultFollowUpsPerQuestion = 2;
 interface Interview {
   id: string;
   pack: Pack;
+  startedAt: Date;
+  /** Set when the interview finishes. */
+  finishedAt?: Date;
   questions: PlannedQuestion[];
   status: InterviewStatus;
   questionNumber: number;
@@ -79,21 +88,31 @@ interface Interview {
  * Runs interviews: setup → asking question 1 … N → finished → debrief.
  * After each answer, the interviewer may follow up on the same question, up to
  * a cap, before moving on. Ending early jumps from asking to finished.
- * Interviews live in memory for now; saving them comes with the history.
+ * A finished interview is saved to the history, and saved again once its
+ * debrief is written.
  */
 export class InterviewEngine {
   readonly #model: AIModel;
   readonly #questionsPerInterview: number;
   readonly #followUpsPerQuestion: number;
+  readonly #history: Pick<InterviewHistory, "save"> | undefined;
+  readonly #now: () => Date;
   readonly #interviews = new Map<string, Interview>();
 
   constructor(
     model: AIModel,
-    { questionsPerInterview = 5, followUpsPerQuestion = defaultFollowUpsPerQuestion }: InterviewEngineOptions = {},
+    {
+      questionsPerInterview = 5,
+      followUpsPerQuestion = defaultFollowUpsPerQuestion,
+      history,
+      now = () => new Date(),
+    }: InterviewEngineOptions = {},
   ) {
     this.#model = model;
     this.#questionsPerInterview = questionsPerInterview;
     this.#followUpsPerQuestion = followUpsPerQuestion;
+    this.#history = history;
+    this.#now = now;
   }
 
   /** Starts an interview on a pack. The interviewer greets the candidate and asks question 1. */
@@ -105,6 +124,7 @@ export class InterviewEngine {
     const interview: Interview = {
       id: randomUUID(),
       pack,
+      startedAt: this.#now(),
       questions,
       status: "setup",
       questionNumber: 0,
@@ -160,7 +180,7 @@ export class InterviewEngine {
   }
 
   /** Ends the interview before the last question. The debrief covers the questions answered so far. */
-  end(id: string): InterviewSummary {
+  async end(id: string): Promise<InterviewSummary> {
     const interview = this.#find(id);
     if (interview.status === "finished") {
       throw new InterviewError("finished", "This interview is already over.");
@@ -169,8 +189,10 @@ export class InterviewEngine {
       throw new InterviewError("busy", "The interviewer is still writing. Wait for their message.");
     }
     interview.status = "finished";
+    interview.finishedAt = this.#now();
     interview.followUpNumber = 0;
     interview.endedEarly = true;
+    await this.#save(interview);
     return summarize(interview);
   }
 
@@ -188,10 +210,13 @@ export class InterviewEngine {
       totalQuestions: interview.questions.length,
       transcript: interview.transcript,
       endedEarly: interview.endedEarly,
+    }).then(async (debrief) => {
+      interview.debrief = debrief;
+      await this.#save(interview);
+      return debrief;
     }));
     try {
-      interview.debrief = await writing;
-      return interview.debrief;
+      return await writing;
     } catch (error) {
       if (error instanceof DebriefFormatError) throw new InterviewError("debrief-failed", error.message);
       throw new InterviewError(
@@ -212,6 +237,21 @@ export class InterviewEngine {
     };
   }
 
+  /**
+   * Saves a finished interview to the history. A failure is reported in the
+   * terminal but doesn't stop the interview: the candidate still gets the debrief.
+   */
+  async #save(interview: Interview): Promise<void> {
+    if (!this.#history) return;
+    try {
+      await this.#history.save(toSaved(interview));
+    } catch (error) {
+      console.error(
+        `This interview couldn't be saved to the history: ${error instanceof Error ? error.message : String(error)}`,
+      );
+    }
+  }
+
   #find(id: string): Interview {
     const interview = this.#interviews.get(id);
     if (!interview) throw new InterviewError("not-found", "This interview doesn't exist.");
@@ -226,6 +266,8 @@ export class InterviewEngine {
     onFailure?: () => void,
   ): InterviewTurn {
     const model = this.#model;
+    const now = this.#now;
+    const save = (finished: Interview) => this.#save(finished);
     interview.busy = true;
 
     async function* turn(): AsyncGenerator<TurnUpdate> {
@@ -251,6 +293,10 @@ export class InterviewEngine {
         interview.followUpNumber = next.followUpNumber;
         interview.answeredQuestions = answeredQuestions;
         committed = true;
+        if (next.status === "finished") {
+          interview.finishedAt = now();
+          await save(interview);
+        }
       } finally {
         interview.busy = false;
         if (!committed) onFailure?.();
@@ -303,6 +349,23 @@ function planQuestions(pack: Pack, count: number): PlannedQuestion[] {
     }
   }
   return questions.slice(0, count);
+}
+
+function toSaved(interview: Interview): SavedInterview {
+  const { id, pack, startedAt, finishedAt = startedAt } = interview;
+  return {
+    formatVersion: 1,
+    id,
+    startedAt: startedAt.toISOString(),
+    finishedAt: finishedAt.toISOString(),
+    packs: [{ id: pack.id, title: pack.title, technology: pack.technology, level: pack.level }],
+    language: pack.language,
+    totalQuestions: interview.questions.length,
+    answeredQuestions: interview.answeredQuestions,
+    endedEarly: interview.endedEarly,
+    transcript: [...interview.transcript],
+    debrief: interview.debrief ?? null,
+  };
 }
 
 function summarize(interview: Interview): InterviewSummary {

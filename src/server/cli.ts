@@ -5,7 +5,7 @@ import { fileURLToPath } from "node:url";
 import { parseArgs } from "node:util";
 import open from "open";
 import { startServer } from "./server.js";
-import { loadFollowUpsOrExit, loadModelOrExit, loadPacksWithWarnings } from "./startup.js";
+import { loadDataDir, loadFollowUpsOrExit, loadModelOrExit, loadPacksWithWarnings } from "./startup.js";
 
 const { values: flags } = parseArgs({
   options: { open: { type: "boolean", default: true } },
@@ -23,6 +23,7 @@ const server = await startServer({
   model: loadModelOrExit(),
   packs: loadPacksWithWarnings(),
   followUpsPerQuestion: loadFollowUpsOrExit(),
+  dataDir: loadDataDir(),
   uiDir,
 });
 console.log(`Mockroom is running at ${server.url}`);

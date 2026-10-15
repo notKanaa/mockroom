@@ -1,4 +1,10 @@
-import type { Debrief, InterviewSummary, TurnEvent } from "../../src/server/api-types.js";
+import type {
+  Debrief,
+  HistoryEntry,
+  InterviewSummary,
+  SavedInterview,
+  TurnEvent,
+} from "../../src/server/api-types.js";
 
 export interface TurnResult {
   status: number;
@@ -40,8 +46,26 @@ export class InterviewClient {
     return this.#post(`/api/interviews/${interviewId}/debrief`);
   }
 
-  async #post<T>(path: string): Promise<JsonResult<T>> {
-    const response = await fetch(`${this.baseUrl}${path}`, { method: "POST" });
+  /** The past interviews, most recent first. */
+  history(): Promise<JsonResult<HistoryEntry[]>> {
+    return this.#request("GET", "/api/history");
+  }
+
+  savedInterview(interviewId: string): Promise<JsonResult<SavedInterview>> {
+    return this.#request("GET", `/api/history/${interviewId}`);
+  }
+
+  deleteSavedInterview(interviewId: string): Promise<JsonResult<undefined>> {
+    return this.#request("DELETE", `/api/history/${interviewId}`);
+  }
+
+  #post<T>(path: string): Promise<JsonResult<T>> {
+    return this.#request("POST", path);
+  }
+
+  async #request<T>(method: string, path: string): Promise<JsonResult<T>> {
+    const response = await fetch(`${this.baseUrl}${path}`, { method });
+    if (response.status === 204) return { status: response.status };
     const body = (await response.json()) as T | { error: string };
     if (!response.ok) return { status: response.status, error: (body as { error: string }).error };
     return { status: response.status, body: body as T };

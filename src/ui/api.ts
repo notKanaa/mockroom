@@ -1,4 +1,12 @@
-import type { ApiError, Debrief, InterviewSummary, PackSummary, TurnEvent } from "../server/api-types";
+import type {
+  ApiError,
+  Debrief,
+  HistoryEntry,
+  InterviewSummary,
+  PackSummary,
+  SavedInterview,
+  TurnEvent,
+} from "../server/api-types";
 
 export async function listPacks(): Promise<PackSummary[]> {
   const response = await fetch("/api/packs");
@@ -24,8 +32,28 @@ export function fetchDebrief(interviewId: string): Promise<Debrief> {
   return postJson(`/api/interviews/${interviewId}/debrief`);
 }
 
-async function postJson<T>(path: string): Promise<T> {
-  const response = await fetch(path, { method: "POST" }).catch(() => undefined);
+/** The past interviews saved on this machine, most recent first. */
+export function listHistory(): Promise<HistoryEntry[]> {
+  return requestJson("GET", "/api/history");
+}
+
+/** A past interview, with its transcript and debrief. */
+export function fetchSavedInterview(interviewId: string): Promise<SavedInterview> {
+  return requestJson("GET", `/api/history/${interviewId}`);
+}
+
+/** Deletes a past interview's file. */
+export async function deleteSavedInterview(interviewId: string): Promise<void> {
+  await requestJson("DELETE", `/api/history/${interviewId}`);
+}
+
+function postJson<T>(path: string): Promise<T> {
+  return requestJson("POST", path);
+}
+
+async function requestJson<T>(method: string, path: string): Promise<T> {
+  const response = await fetch(path, { method }).catch(() => undefined);
+  if (response?.status === 204) return undefined as T;
   const body = (await response?.json().catch(() => undefined)) as T | Partial<ApiError> | undefined;
   if (!response?.ok) {
     throw new Error((body as Partial<ApiError> | undefined)?.error ?? "The local server can't be reached.");
