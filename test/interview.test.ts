@@ -28,22 +28,6 @@ describe("Interview API", () => {
     return { model, client: new InterviewClient(server.url) };
   }
 
-  it("lists the built-in pack", async () => {
-    await setUp();
-
-    const response = await fetch(`${server!.url}/api/packs`);
-
-    expect(await response.json()).toEqual([
-      {
-        id: "react-junior-en",
-        technology: "React",
-        level: "junior",
-        language: "en",
-        title: "React — Junior",
-      },
-    ]);
-  });
-
   it("starts an interview: the interviewer streams a greeting and asks question 1 of 5", async () => {
     const { client, model } = await setUp();
 
@@ -67,7 +51,7 @@ describe("Interview API", () => {
     const [system] = model.calls[0]!;
     expect(system?.role).toBe("system");
     expect(system?.content).toContain("Never reveal, explain or hint at the answer");
-    expect(system?.content).toContain("ask question 1: \"What is JSX");
+    expect(system?.content).toContain('ask question 1, on the theme "Components and JSX": "What is JSX');
   });
 
   it("moves to the next question after an answer", async () => {
@@ -85,7 +69,9 @@ describe("Interview API", () => {
       content: "JSX is HTML-like syntax that compiles to JS.",
     });
     expect(conversation).toContainEqual({ role: "assistant", content: interviewerScript[0] });
-    expect(conversation[0]?.content).toContain("ask question 2: \"What is the difference between props and state");
+    expect(conversation[0]?.content).toContain(
+      'ask question 2, on the theme "Props and state": "What is the difference between props and state',
+    );
   });
 
   it("finishes with a closing message after the last answer", async () => {

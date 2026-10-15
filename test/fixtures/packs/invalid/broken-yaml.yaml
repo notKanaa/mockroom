@@ -1,0 +1,12 @@
+id: broken-yaml
+technology: React
+level: junior
+language: en
+title: React — Junior
+
+themes:
+  - name: Effects
+    questions:
+      - How does useEffect work?
+     key_points:
+      - The effect runs after render

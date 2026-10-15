@@ -5,7 +5,7 @@ import { fileURLToPath } from "node:url";
 import { parseArgs } from "node:util";
 import open from "open";
 import { startServer } from "./server.js";
-import { loadModelOrExit } from "./startup.js";
+import { loadModelOrExit, loadPacksWithWarnings } from "./startup.js";
 
 const { values: flags } = parseArgs({
   options: { open: { type: "boolean", default: true } },
@@ -19,7 +19,7 @@ if (!existsSync(join(uiDir, "index.html"))) {
   process.exit(1);
 }
 
-const server = await startServer({ model: loadModelOrExit(), uiDir });
+const server = await startServer({ model: loadModelOrExit(), packs: loadPacksWithWarnings(), uiDir });
 console.log(`Mockroom is running at ${server.url}`);
 console.log("Press Ctrl+C to stop.");
 

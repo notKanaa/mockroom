@@ -5,10 +5,13 @@ import { stream } from "hono/streaming";
 import { collectText, type AIModel } from "./ai/model.js";
 import type { ApiError, PackSummary, TurnEvent } from "./api-types.js";
 import { InterviewEngine, InterviewError, type InterviewErrorCode, type InterviewTurn } from "./interview/engine.js";
-import { builtInPacks, findPack } from "./packs/library.js";
+import { filterPacks } from "./packs/library.js";
+import type { Pack } from "./packs/pack.js";
 
 export interface AppOptions {
   model: AIModel;
+  /** Packs the candidate can pick from (see `loadPacks`). */
+  packs: readonly Pack[];
   /** Folder holding the built UI. Omitted in dev mode, where Vite serves the UI. */
   uiDir?: string;
 }
@@ -20,7 +23,7 @@ const statusByErrorCode: Record<InterviewErrorCode, ContentfulStatusCode> = {
   "empty-answer": 400,
 };
 
-export function createApp({ model, uiDir }: AppOptions): Hono {
+export function createApp({ model, packs, uiDir }: AppOptions): Hono {
   const app = new Hono();
   const engine = new InterviewEngine(model);
 
@@ -38,23 +41,25 @@ export function createApp({ model, uiDir }: AppOptions): Hono {
     }
   });
 
-  app.get("/api/packs", (c) =>
-    c.json(
-      builtInPacks.map(
-        ({ id, technology, level, language, title }): PackSummary => ({
+  app.get("/api/packs", (c) => {
+    const { technology, level, language } = c.req.query();
+    return c.json(
+      filterPacks(packs, { technology, level, language }).map(
+        ({ id, technology, level, language, title, themes }): PackSummary => ({
           id,
           technology,
           level,
           language,
           title,
+          themes: themes.map((theme) => theme.name),
         }),
       ),
-    ),
-  );
+    );
+  });
 
   app.post("/api/interviews", async (c) => {
     const { packId } = await readJsonBody(c);
-    const pack = typeof packId === "string" ? findPack(packId) : undefined;
+    const pack = packs.find((candidate) => candidate.id === packId);
     if (!pack) return c.json<ApiError>({ error: "This pack doesn't exist." }, 404);
     return streamTurn(c, engine.start(pack));
   });

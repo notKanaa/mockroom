@@ -1,0 +1,15 @@
+id: rust-senior-en
+technology: Rust
+level: senior
+language: en
+title: Rust — Senior
+
+themes:
+  - name: Ownership
+    questions:
+      - How does the borrow checker prevent data races?
+    key_points:
+      - Either one mutable reference or any number of shared references, never both
+    resources:
+      - title: References and Borrowing
+        url: https://doc.rust-lang.org/book/ch04-02-references-and-borrowing.html

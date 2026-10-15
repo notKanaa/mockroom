@@ -39,7 +39,11 @@ Until the settings screen arrives, Mockroom picks its AI from environment variab
 
 Your key is only sent to the provider you chose.
 
-For now there is one built-in sample pack (React, junior, in English): the interviewer asks 5 questions, one at a time, and ends the interview with a closing message.
+Pick an **interview pack** (filter them by technology, level and language): the interviewer asks up to 5 of its questions, one at a time, and ends the interview with a closing message. For now there is one built-in sample pack (React, junior, in English).
+
+### Write an interview pack
+
+Packs are plain YAML files in the [`packs`](packs) folder: anyone can write one, no coding needed. See [CONTRIBUTING.md](CONTRIBUTING.md) for the format and an annotated example.
 
 ### Contributing: dev mode
 
@@ -55,6 +59,7 @@ Other scripts:
 | ------------------- | -------------------------------------------------- |
 | `npm test`          | Runs the tests (HTTP API with a fake AI model)     |
 | `npm run typecheck` | Type-checks the server, tests and UI               |
+| `npm run validate-packs` | Checks the packs in `packs` against the pack format |
 | `npm run build`     | Builds the UI into `dist/ui` and the server into `dist/server` |
 
 ## Planned for v1

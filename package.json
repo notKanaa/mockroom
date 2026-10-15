@@ -12,7 +12,8 @@
     "mockroom": "dist/server/cli.js"
   },
   "files": [
-    "dist"
+    "dist",
+    "packs"
   ],
   "engines": {
     "node": ">=22.12.0"
@@ -23,7 +24,8 @@
     "start": "node --env-file-if-exists=.env dist/server/cli.js",
     "typecheck": "tsc -p tsconfig.json && tsc -p src/ui/tsconfig.json",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "validate-packs": "tsx scripts/validate-packs.ts"
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^4.0.81",
@@ -33,7 +35,8 @@
     "@hono/node-server": "^2.1.5",
     "ai": "^7.0.142",
     "hono": "^4.13.13",
-    "open": "^11.0.4"
+    "open": "^11.0.4",
+    "yaml": "^2.9.1"
   },
   "devDependencies": {
     "@types/node": "^22.20.5",

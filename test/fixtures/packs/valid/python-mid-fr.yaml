@@ -1,0 +1,26 @@
+id: python-mid-fr
+technology: Python
+level: mid
+language: fr
+title: Python — Confirmé
+
+themes:
+  - name: Générateurs
+    questions:
+      - Qu'est-ce qu'un générateur en Python ?
+      - "Quelle est la différence entre return et yield ?"
+    key_points:
+      - Un générateur produit ses valeurs une par une, à la demande
+      - yield suspend la fonction et reprend là où elle s'était arrêtée
+    resources:
+      - title: "Glossaire Python : générateur"
+        url: https://docs.python.org/fr/3/glossary.html#term-generator
+
+  - name: Décorateurs
+    questions:
+      - À quoi sert un décorateur ?
+    key_points:
+      - Un décorateur est une fonction qui enveloppe une autre fonction
+    resources:
+      - title: "Glossaire Python : décorateur"
+        url: https://docs.python.org/fr/3/glossary.html#term-decorator
