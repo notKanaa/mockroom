@@ -121,7 +121,8 @@ function parseDebrief(reply: string, { answered, endedEarly }: DebriefRequest): 
   const questions: DebriefQuestion[] = [];
   for (const [index, planned] of answered.entries()) {
     const number = index + 1;
-    const item = items.find((candidate) => isRecord(candidate) && candidate.number === number);
+    // Small local models sometimes write the number as text ("1"), so both are accepted.
+    const item = items.find((candidate) => isRecord(candidate) && Number(candidate.number) === number);
     if (!isRecord(item)) return `question ${number} is missing`;
 
     const strengths = textList(item.strengths);
@@ -143,10 +144,10 @@ function parseDebrief(reply: string, { answered, endedEarly }: DebriefRequest): 
     });
   }
 
-  if (typeof data.summary !== "string" || data.summary.trim() === "") {
-    return '"summary" must be a non-empty text';
-  }
-  return { endedEarly, questions, summary: data.summary.trim() };
+  // The summary is a nice extra: small local models often leave it out, and the
+  // per-question feedback is still worth showing without it.
+  const summary = typeof data.summary === "string" ? data.summary.trim() : "";
+  return { endedEarly, questions, summary };
 }
 
 /** The resource the model picked, or the theme's first one if its pick isn't in the list. */

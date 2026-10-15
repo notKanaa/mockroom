@@ -171,6 +171,22 @@ describe("Debrief API", () => {
     expect(retry.at(-1)?.content).toContain("Mockroom couldn't read that debrief: it contains no JSON object");
   });
 
+  it("accepts the looser debriefs small local models write: no summary, numbers as text", async () => {
+    const { client, model } = await setUp([
+      ...interviewerScript.slice(0, 3),
+      JSON.stringify({ questions: [{ ...feedback(1), number: "1" }, feedback(2)], summary: "" }),
+    ]);
+    const id = await answerQuestions(client, 2);
+    await client.end(id);
+
+    const { status, body: debrief } = await client.debrief(id);
+
+    expect(status).toBe(200);
+    expect(debrief?.summary).toBe("");
+    expect(debrief?.questions.map((question) => question.number)).toEqual([1, 2]);
+    expect(model.calls).toHaveLength(4);
+  });
+
   it("reports a clear error when the debrief is malformed twice, and can try again", async () => {
     const { client } = await setUp([
       ...interviewerScript.slice(0, 2),
