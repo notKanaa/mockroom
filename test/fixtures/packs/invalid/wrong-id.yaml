@@ -1,0 +1,15 @@
+id: react-junior-en
+technology: React
+level: junior
+language: en
+title: React — Junior
+
+themes:
+  - name: Effects
+    questions:
+      - How does useEffect work?
+    key_points:
+      - The effect runs after render
+    resources:
+      - title: Synchronizing with Effects
+        url: https://react.dev/learn/synchronizing-with-effects

@@ -1,0 +1,15 @@
+id: unquoted-colon
+technology: React
+level: junior
+language: en
+title: React — Junior
+
+themes:
+  - name: Effects
+    questions:
+      - Explain this: when does an effect run?
+    key_points:
+      - The effect runs after render
+    resources:
+      - title: Synchronizing with Effects
+        url: https://react.dev/learn/synchronizing-with-effects

@@ -7,7 +7,7 @@ on:
 
 jobs:
   check:
-    name: Typecheck, test and build (Node ${{ matrix.node }})
+    name: Typecheck, validate packs, test and build (Node ${{ matrix.node }})
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -20,5 +20,6 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run typecheck
+      - run: npm run validate-packs
       - run: npm test
       - run: npm run build

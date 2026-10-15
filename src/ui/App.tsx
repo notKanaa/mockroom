@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import type { PackSummary } from "../server/api-types";
 import { listPacks } from "./api";
 import { InterviewRoom } from "./InterviewRoom";
+import { PackPicker } from "./PackPicker";
 import { useInterview } from "./useInterview";
 
 export function App() {
@@ -39,29 +40,12 @@ function Home({ starting, error, onStart }: HomeProps) {
       )}
       {!packs && !loadError && <p className="status">Connecting to the local server…</p>}
 
-      {packs && (
-        <ul className="packs">
-          {packs.map((pack) => (
-            <li key={pack.id} className="pack">
-              <div>
-                <p className="pack-title">{pack.title}</p>
-                <p className="pack-meta">
-                  {pack.technology} · {pack.level} · {pack.language.toUpperCase()}
-                </p>
-              </div>
-              <button type="button" disabled={starting} onClick={() => onStart(pack.id)}>
-                {starting ? "Starting…" : "Start interview"}
-              </button>
-            </li>
-          ))}
-        </ul>
-      )}
-
       {error && (
         <p className="status status-unreachable" role="alert">
           {error}
         </p>
       )}
+      {packs && <PackPicker packs={packs} starting={starting} onStart={onStart} />}
     </main>
   );
 }

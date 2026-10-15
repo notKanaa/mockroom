@@ -1,0 +1,24 @@
+id: duplicate-theme
+technology: React
+level: junior
+language: en
+title: React — Junior
+
+themes:
+  - name: Effects
+    questions:
+      - How does useEffect work?
+    key_points:
+      - The effect runs after render
+    resources:
+      - title: Synchronizing with Effects
+        url: https://react.dev/learn/synchronizing-with-effects
+
+  - name: Effects
+    questions:
+      - When does the cleanup function run?
+    key_points:
+      - Before the next effect and on unmount
+    resources:
+      - title: Synchronizing with Effects
+        url: https://react.dev/learn/synchronizing-with-effects

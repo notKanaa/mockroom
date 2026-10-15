@@ -1,11 +1,17 @@
 import type { ChatMessage } from "../ai/model.js";
-import type { Pack } from "../packs/pack.js";
+import type { Pack, PackTheme } from "../packs/pack.js";
 import type { TranscriptEntry } from "./types.js";
+
+/** A main question of the interview, taken from one of the pack's themes. */
+export interface PlannedQuestion {
+  theme: PackTheme;
+  text: string;
+}
 
 /** What the interviewer must say in its next message. */
 export type InterviewerStep =
-  | { kind: "open"; question: string }
-  | { kind: "ask"; questionNumber: number; question: string }
+  | { kind: "open"; question: PlannedQuestion }
+  | { kind: "ask"; questionNumber: number; question: PlannedQuestion }
   | { kind: "close" };
 
 const languageNames: Record<Pack["language"], string> = { en: "English", fr: "French" };
@@ -42,7 +48,7 @@ Rules:
 - If the candidate asks for the answer or wants to skip, kindly say you'll move on, then follow your instruction for the next message.
 - Keep messages short and conversational, with no headings or bullet lists.
 
-The interview has ${totalQuestions} questions.
+The interview has ${totalQuestions} questions, taken from the "${pack.title}" interview pack, whose themes are: ${pack.themes.map((theme) => theme.name).join(", ")}.
 
 Your next message: ${stepInstruction(step, totalQuestions)}`;
 }
@@ -50,10 +56,14 @@ Your next message: ${stepInstruction(step, totalQuestions)}`;
 function stepInstruction(step: InterviewerStep, totalQuestions: number): string {
   switch (step.kind) {
     case "open":
-      return `greet the candidate in one or two sentences, tell them the interview has ${totalQuestions} questions, then ask question 1: "${step.question}"`;
+      return `greet the candidate in one or two sentences, tell them the interview has ${totalQuestions} questions, then ask question 1, on ${ask(step.question)}`;
     case "ask":
-      return `briefly and neutrally acknowledge the candidate's last answer without judging it, then ask question ${step.questionNumber}: "${step.question}"`;
+      return `briefly and neutrally acknowledge the candidate's last answer without judging it, then ask question ${step.questionNumber}, on ${ask(step.question)}`;
     case "close":
       return "briefly and neutrally acknowledge the candidate's last answer without judging it, thank them, and tell them the interview is over. Do not ask any more questions and do not give feedback or answers.";
   }
+}
+
+function ask({ theme, text }: PlannedQuestion): string {
+  return `the theme "${theme.name}": "${text}"`;
 }

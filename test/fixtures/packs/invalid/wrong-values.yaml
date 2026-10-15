@@ -1,0 +1,15 @@
+id: wrong-values
+technology: React
+level: expert
+language: de
+title: React — Expert
+
+themes:
+  - name: Effects
+    questions:
+      - How does useEffect work?
+    key_points:
+      - The effect runs after render
+    resources:
+      - title: Synchronizing with Effects
+        url: react.dev/learn/synchronizing-with-effects

@@ -1,0 +1,15 @@
+id: python-junior-en
+technology: Python
+level: junior
+language: en
+title: Python — Junior
+
+themes:
+  - name: Lists and tuples
+    questions:
+      - What is the difference between a list and a tuple?
+    key_points:
+      - Lists are mutable; tuples are immutable
+    resources:
+      - title: Data Structures
+        url: https://docs.python.org/3/tutorial/datastructures.html

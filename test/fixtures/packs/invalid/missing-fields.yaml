@@ -1,0 +1,12 @@
+id: missing-fields
+technology: React
+language: en
+title: React — Junior
+
+themes:
+  - name: Effects
+    questions:
+      - How does useEffect work?
+    resources:
+      - title: Synchronizing with Effects
+        url: https://react.dev/learn/synchronizing-with-effects

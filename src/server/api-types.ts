@@ -1,5 +1,6 @@
 // Shapes sent over the HTTP API. Pure types: the UI imports them too.
 import type { InterviewSummary } from "./interview/types.js";
+import type { PackLanguage, PackLevel } from "./packs/pack.js";
 
 export type {
   InterviewDetails,
@@ -8,12 +9,17 @@ export type {
   TranscriptEntry,
 } from "./interview/types.js";
 
+export type { PackLanguage, PackLevel } from "./packs/pack.js";
+
+/** A pack as listed by `GET /api/packs`, which takes optional `technology`, `level` and `language` filters. */
 export interface PackSummary {
   id: string;
   technology: string;
-  level: string;
-  language: string;
+  level: PackLevel;
+  language: PackLanguage;
   title: string;
+  /** Theme names, in the order the interview goes through them. */
+  themes: string[];
 }
 
 /**

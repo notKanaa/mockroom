@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import type { AIModel } from "../ai/model.js";
 import type { Pack } from "../packs/pack.js";
-import { interviewerPrompt, type InterviewerStep } from "./prompt.js";
+import { interviewerPrompt, type InterviewerStep, type PlannedQuestion } from "./prompt.js";
 import type {
   InterviewDetails,
   InterviewStatus,
@@ -40,7 +40,7 @@ export interface InterviewEngineOptions {
 interface Interview {
   id: string;
   pack: Pack;
-  questions: string[];
+  questions: PlannedQuestion[];
   status: InterviewStatus;
   questionNumber: number;
   transcript: TranscriptEntry[];
@@ -162,14 +162,14 @@ export class InterviewEngine {
   }
 }
 
-/** Picks the questions to ask, one theme after another. */
-function planQuestions(pack: Pack, count: number): string[] {
-  const questions: string[] = [];
+/** Picks the questions to ask from the pack, one theme after another. */
+function planQuestions(pack: Pack, count: number): PlannedQuestion[] {
+  const questions: PlannedQuestion[] = [];
   const longestTheme = Math.max(0, ...pack.themes.map((theme) => theme.questions.length));
   for (let round = 0; round < longestTheme; round++) {
     for (const theme of pack.themes) {
-      const question = theme.questions[round];
-      if (question !== undefined) questions.push(question);
+      const text = theme.questions[round];
+      if (text !== undefined) questions.push({ theme, text });
     }
   }
   return questions.slice(0, count);
