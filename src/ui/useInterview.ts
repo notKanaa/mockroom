@@ -41,9 +41,13 @@ export function useInterview() {
     try {
       await request((event) => {
         if (event.type === "interview") {
+          const { questionNumber, followUpNumber } = event.interview;
           setState({
             interview: event.interview,
-            messages: [...messages, { role: "interviewer", content: "" }],
+            messages: [
+              ...messages,
+              { role: "interviewer", content: "", ...(followUpNumber > 0 && { questionNumber, followUpNumber }) },
+            ],
           });
         } else if (event.type === "delta") {
           setState((current) => ({ ...current, messages: appendToLast(current.messages, event.text) }));

@@ -265,6 +265,13 @@ textarea:focus-visible {
   margin-bottom: 4px;
 }
 
+.message-tag {
+  margin-left: 6px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+}
+
 .message-candidate .message-author {
   text-align: right;
 }

@@ -58,7 +58,9 @@ ${coverage}
 
 ${answered.map((question, index) => describeQuestion(index + 1, question)).join("\n\n")}
 
-For each of these questions, judge what the candidate actually said in the transcript (they may have answered over several messages):
+The transcript is grouped by question. The interviewer may have asked follow-up questions on a question to dig into the answer: they belong to that question, so judge the candidate's first answer and their answers to its follow-ups together, as one answer. Never write a separate entry for a follow-up.
+
+For each of these questions, judge what the candidate actually said in the transcript:
 - "strengths": what the answer got right, as short points. Be specific and sincere. If the candidate didn't know, credit any honest attempt or partial idea; leave it empty only if there is really nothing.
 - "gaps": the key points the answer missed or got wrong, as short points phrased as things to add. Leave it empty if nothing important is missing.
 - "modelAnswer": a short answer, a few sentences long, that covers the key points the way a strong candidate would say it.
@@ -71,14 +73,25 @@ Tone: warm and encouraging, like a mentor. Never give a score, grade, mark, perc
 Reply with only a JSON object, with no text before or after it and no code fence, in exactly this shape:
 {"questions":[{"number":1,"strengths":["..."],"gaps":["..."],"modelAnswer":"...","resource":1}],"summary":"..."}`;
 
-  const conversation = transcript
-    .map(({ role, content }) => `${role === "interviewer" ? "Interviewer" : "Candidate"}: ${content}`)
-    .join("\n\n");
-
   return [
     { role: "system", content: system },
-    { role: "user", content: `Here is the interview transcript.\n\n${conversation}` },
+    { role: "user", content: `Here is the interview transcript.\n\n${transcriptByQuestion(transcript)}` },
   ];
+}
+
+/** The transcript as text, each question's messages (follow-ups included) under its own heading. */
+function transcriptByQuestion(transcript: TranscriptEntry[]): string {
+  const sections: string[][] = [];
+  let current: number | undefined | null = null;
+  for (const { role, content, questionNumber, followUpNumber } of transcript) {
+    if (questionNumber !== current) {
+      current = questionNumber;
+      sections.push([questionNumber === undefined ? "After the last question" : `Question ${questionNumber}`]);
+    }
+    const author = role === "candidate" ? "Candidate" : followUpNumber ? "Interviewer (follow-up)" : "Interviewer";
+    sections.at(-1)!.push(`${author}: ${content}`);
+  }
+  return sections.map((lines) => lines.join("\n\n")).join("\n\n---\n\n");
 }
 
 function describeQuestion(number: number, { theme, text }: PlannedQuestion): string {

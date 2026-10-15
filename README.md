@@ -36,10 +36,11 @@ Until the settings screen arrives, Mockroom picks its AI from environment variab
 | `MOCKROOM_MODEL`      | The model to use. Optional, except for Ollama (e.g. `llama3.2`)              |
 | `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, `GEMINI_API_KEY` | Your key for the chosen provider. Ollama needs none |
 | `MOCKROOM_OLLAMA_URL` | Where Ollama runs. Defaults to `http://127.0.0.1:11434`                      |
+| `MOCKROOM_FOLLOW_UPS` | The most follow-up questions the interviewer asks on one question. Defaults to `2`; `0` turns them off |
 
 Your key is only sent to the provider you chose.
 
-Pick an **interview pack** (filter them by technology, level and language): the interviewer asks up to 5 of its questions, one at a time, and ends the interview with a closing message. For now there is one built-in sample pack (React, junior, in English).
+Pick an **interview pack** (filter them by technology, level and language): the interviewer asks up to 5 of its questions, one at a time, and ends the interview with a closing message. When an answer is vague or misses key points of the pack, the interviewer asks a follow-up question before moving on, like a real recruiter, but never gives the answer away. For now there is one built-in sample pack (React, junior, in English).
 
 ### Write an interview pack
 

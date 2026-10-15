@@ -24,7 +24,8 @@ describe("Interview API", () => {
 
   async function setUp(replies: (string | Error)[] = interviewerScript) {
     const model = new ScriptedModel(replies);
-    server = await startTestServer({ model });
+    // Follow-ups are off here, so each answer gets one interviewer reply. See follow-ups.test.ts.
+    server = await startTestServer({ model, followUpsPerQuestion: 0 });
     return { model, client: new InterviewClient(server.url) };
   }
 
@@ -41,6 +42,7 @@ describe("Interview API", () => {
         pack: { id: "react-junior-en", title: "React — Junior" },
         status: "asking",
         questionNumber: 1,
+        followUpNumber: 0,
         totalQuestions: 5,
       },
     });
@@ -91,7 +93,7 @@ describe("Interview API", () => {
     const details = (await response.json()) as InterviewDetails;
     expect(details.status).toBe("finished");
     expect(details.transcript).toHaveLength(11);
-    expect(details.transcript.at(-2)).toEqual({ role: "candidate", content: "Answer 5" });
+    expect(details.transcript.at(-2)).toEqual({ role: "candidate", content: "Answer 5", questionNumber: 5 });
     expect(details.transcript.at(-1)).toEqual({ role: "interviewer", content: interviewerScript[5] });
 
     const afterEnd = await client.answer(interview!.id, "One more thing");

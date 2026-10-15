@@ -39,7 +39,8 @@ describe("Debrief API", () => {
 
   async function setUp(replies: (string | Error)[]) {
     const model = new ScriptedModel(replies);
-    server = await startTestServer({ model });
+    // Follow-ups are off here, so each answer gets one interviewer reply. See follow-ups.test.ts.
+    server = await startTestServer({ model, followUpsPerQuestion: 0 });
     return { model, client: new InterviewClient(server.url) };
   }
 
