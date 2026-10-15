@@ -11,6 +11,8 @@ export type {
   TranscriptEntry,
 } from "./interview/types.js";
 
+export type { HistoryEntry, SavedInterview, SavedPack } from "./history/types.js";
+
 export type { PackLanguage, PackLevel } from "./packs/pack.js";
 
 /** A pack as listed by `GET /api/packs`, which takes optional `technology`, `level` and `language` filters. */

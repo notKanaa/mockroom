@@ -1,8 +1,6 @@
 import { useState } from "react";
 import type { PackLanguage, PackLevel, PackSummary } from "../server/api-types";
-
-const levelLabels: Record<PackLevel, string> = { junior: "Junior", mid: "Mid-level", senior: "Senior" };
-const languageLabels: Record<PackLanguage, string> = { en: "English", fr: "French" };
+import { languageLabels, levelLabels } from "./labels";
 
 interface PackPickerProps {
   packs: PackSummary[];

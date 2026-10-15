@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type FormEvent, type KeyboardEvent } from "react";
+import { Message } from "./Message";
 import type { useInterview } from "./useInterview";
 
 interface InterviewRoomProps {
@@ -85,15 +86,7 @@ export function InterviewRoom({ session }: InterviewRoomProps) {
       <ol ref={chatRef} className="chat" aria-label="Conversation">
         {messages.map((message, index) => {
           const isTyping = streaming && index === messages.length - 1 && message.role === "interviewer";
-          return (
-            <li key={index} className={`message message-${message.role}`}>
-              <span className="message-author">
-                {message.role === "interviewer" ? "Interviewer" : "You"}
-                {message.followUpNumber !== undefined && <span className="message-tag">Follow-up</span>}
-              </span>
-              <p className={isTyping ? "message-text typing" : "message-text"}>{message.content}</p>
-            </li>
-          );
+          return <Message key={index} message={message} typing={isTyping} />;
         })}
       </ol>
 

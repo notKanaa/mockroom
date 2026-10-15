@@ -1,5 +1,7 @@
+import { join } from "node:path";
 import type { AIModel } from "./ai/model.js";
 import { modelFromEnv } from "./ai/provider.js";
+import { mockroomDataDir } from "./data-dir.js";
 import { loadPacks } from "./packs/library.js";
 import type { Pack } from "./packs/pack.js";
 import { formatPackProblem } from "./packs/parse.js";
@@ -18,6 +20,13 @@ export function loadModelOrExit(): AIModel {
     console.error(error instanceof Error ? error.message : error);
     process.exit(1);
   }
+}
+
+/** Finds the Mockroom data folder and says where interviews are saved. */
+export function loadDataDir(): string {
+  const dataDir = mockroomDataDir();
+  console.log(`Interviews are saved in ${join(dataDir, "interviews")}`);
+  return dataDir;
 }
 
 /** Loads the built-in packs. Invalid ones are left out with a warning, so the others stay usable. */

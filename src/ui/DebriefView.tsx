@@ -8,21 +8,42 @@ interface DebriefViewProps {
 
 /** The feedback on a finished interview, question by question. Deliberately without any score. */
 export function DebriefView({ interview, debrief, onDone }: DebriefViewProps) {
-  const answered = debrief.questions.length;
-
   return (
     <main className="debrief">
       <header className="debrief-header">
         <p className="room-pack">{interview.pack.title}</p>
         <h1>Your debrief</h1>
-        {debrief.endedEarly && answered > 0 && (
-          <p className="debrief-note">
-            You ended the interview after {answered} of {interview.totalQuestions} questions, so this debrief covers
-            the {answered === 1 ? "question" : `${answered} questions`} you answered.
-          </p>
-        )}
-        {debrief.summary && <p className="debrief-summary">{debrief.summary}</p>}
       </header>
+
+      <DebriefDetails debrief={debrief} totalQuestions={interview.totalQuestions} />
+
+      <footer className="debrief-footer">
+        <button type="button" onClick={onDone}>
+          Back to packs
+        </button>
+      </footer>
+    </main>
+  );
+}
+
+interface DebriefDetailsProps {
+  debrief: Debrief;
+  totalQuestions: number;
+}
+
+/** The debrief itself: the overall summary, then the feedback on each question. */
+export function DebriefDetails({ debrief, totalQuestions }: DebriefDetailsProps) {
+  const answered = debrief.questions.length;
+
+  return (
+    <>
+      {debrief.endedEarly && answered > 0 && (
+        <p className="debrief-note">
+          You ended the interview after {answered} of {totalQuestions} questions, so this debrief covers the{" "}
+          {answered === 1 ? "question" : `${answered} questions`} you answered.
+        </p>
+      )}
+      {debrief.summary && <p className="debrief-summary">{debrief.summary}</p>}
 
       {answered === 0 ? (
         <p className="debrief-note">
@@ -36,13 +57,7 @@ export function DebriefView({ interview, debrief, onDone }: DebriefViewProps) {
           ))}
         </ol>
       )}
-
-      <footer className="debrief-footer">
-        <button type="button" onClick={onDone}>
-          Back to packs
-        </button>
-      </footer>
-    </main>
+    </>
   );
 }
 

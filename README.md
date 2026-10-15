@@ -37,10 +37,21 @@ Until the settings screen arrives, Mockroom picks its AI from environment variab
 | `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, `GEMINI_API_KEY` | Your key for the chosen provider. Ollama needs none |
 | `MOCKROOM_OLLAMA_URL` | Where Ollama runs. Defaults to `http://127.0.0.1:11434`                      |
 | `MOCKROOM_FOLLOW_UPS` | The most follow-up questions the interviewer asks on one question. Defaults to `2`; `0` turns them off |
+| `MOCKROOM_DATA_DIR`   | Where Mockroom keeps your data, such as past interviews. Defaults to the usual folder for app data (see below) |
 
 Your key is only sent to the provider you chose.
 
 Pick an **interview pack** (filter them by technology, level and language): the interviewer asks up to 5 of its questions, one at a time, and ends the interview with a closing message. When an answer is vague or misses key points of the pack, the interviewer asks a follow-up question before moving on, like a real recruiter, but never gives the answer away. For now there is one built-in sample pack (React, junior, in English).
+
+### Past interviews
+
+Every interview you finish or end early is saved on your computer, with its full transcript and debrief. Open **Past interviews** on the home screen to read one again or delete it. There is no account and nothing is sent anywhere: each interview is a JSON file in the `interviews` folder of Mockroom's data folder (`npm start` prints its path when it starts):
+
+| System          | Data folder                                                       |
+| --------------- | ----------------------------------------------------------------- |
+| Windows         | `%APPDATA%\Mockroom`                                              |
+| macOS           | `~/Library/Application Support/Mockroom`                          |
+| Linux and others | `$XDG_DATA_HOME/mockroom`, or `~/.local/share/mockroom`          |
 
 ### Write an interview pack
 

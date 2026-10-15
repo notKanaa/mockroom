@@ -4,6 +4,7 @@ import type { ContentfulStatusCode } from "hono/utils/http-status";
 import { stream } from "hono/streaming";
 import { collectText, type AIModel } from "./ai/model.js";
 import type { ApiError, InterviewSummary, PackSummary, TurnEvent } from "./api-types.js";
+import { InterviewHistory } from "./history/store.js";
 import { InterviewEngine, InterviewError, type InterviewErrorCode, type InterviewTurn } from "./interview/engine.js";
 import { filterPacks } from "./packs/library.js";
 import type { Pack } from "./packs/pack.js";
@@ -16,6 +17,13 @@ export interface AppOptions {
   uiDir?: string;
   /** The most follow-up questions the interviewer asks on one main question. Defaults to 2; 0 turns them off. */
   followUpsPerQuestion?: number;
+  /**
+   * The Mockroom data folder, where finished interviews are saved (see
+   * `mockroomDataDir`). Required, so tests always pick their own folder.
+   */
+  dataDir: string;
+  /** The current time. Tests set it to get known dates. */
+  now?: () => Date;
 }
 
 const statusByErrorCode: Record<InterviewErrorCode, ContentfulStatusCode> = {
@@ -27,9 +35,10 @@ const statusByErrorCode: Record<InterviewErrorCode, ContentfulStatusCode> = {
   "debrief-failed": 502,
 };
 
-export function createApp({ model, packs, uiDir, followUpsPerQuestion }: AppOptions): Hono {
+export function createApp({ model, packs, uiDir, followUpsPerQuestion, dataDir, now }: AppOptions): Hono {
   const app = new Hono();
-  const engine = new InterviewEngine(model, { followUpsPerQuestion });
+  const history = new InterviewHistory(dataDir);
+  const engine = new InterviewEngine(model, { followUpsPerQuestion, history, now });
 
   app.get("/api/health", (c) => c.json({ name: "Mockroom", status: "ok" }));
 
@@ -78,10 +87,29 @@ export function createApp({ model, packs, uiDir, followUpsPerQuestion }: AppOpti
     return streamTurn(c, engine.answer(c.req.param("id"), answer));
   });
 
-  app.post("/api/interviews/:id/end", (c) => c.json(engine.end(c.req.param("id"))));
+  app.post("/api/interviews/:id/end", async (c) => c.json(await engine.end(c.req.param("id"))));
 
   // Written by the AI model on the first request, then kept. Can take a while.
   app.post("/api/interviews/:id/debrief", async (c) => c.json(await engine.debrief(c.req.param("id"))));
+
+  // Past interviews, saved on this machine only.
+  app.get("/api/history", async (c) => c.json(await history.list()));
+
+  app.get("/api/history/:id", async (c) => {
+    let interview;
+    try {
+      interview = await history.read(c.req.param("id"));
+    } catch (error) {
+      return c.json<ApiError>({ error: errorMessage(error) }, 500);
+    }
+    if (!interview) return c.json<ApiError>({ error: notInHistory }, 404);
+    return c.json(interview);
+  });
+
+  app.delete("/api/history/:id", async (c) => {
+    if (!(await history.delete(c.req.param("id")))) return c.json<ApiError>({ error: notInHistory }, 404);
+    return c.body(null, 204);
+  });
 
   app.onError((error, c) => {
     if (error instanceof InterviewError) {
@@ -95,6 +123,8 @@ export function createApp({ model, packs, uiDir, followUpsPerQuestion }: AppOpti
 
   return app;
 }
+
+const notInHistory = "This interview isn't in your history.";
 
 /** Streams an interviewer turn as newline-delimited JSON events. */
 function streamTurn(c: Context, turn: InterviewTurn): Response {
