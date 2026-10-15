@@ -26,6 +26,21 @@ npm start
 
 To get the real `mockroom` command in your shell, run `npm link` after building.
 
+### Choose your AI
+
+Until the settings screen arrives, Mockroom picks its AI from environment variables. The easiest way is to copy `.env.example` to `.env` and fill it in: `npm start` and `npm run dev` read it.
+
+| Variable              | What it does                                                                 |
+| --------------------- | ---------------------------------------------------------------------------- |
+| `MOCKROOM_PROVIDER`   | `openai`, `anthropic`, `gemini` or `ollama`                                  |
+| `MOCKROOM_MODEL`      | The model to use. Optional, except for Ollama (e.g. `llama3.2`)              |
+| `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, `GEMINI_API_KEY` | Your key for the chosen provider. Ollama needs none |
+| `MOCKROOM_OLLAMA_URL` | Where Ollama runs. Defaults to `http://127.0.0.1:11434`                      |
+
+Your key is only sent to the provider you chose.
+
+For now there is one built-in sample pack (React, junior, in English): the interviewer asks 5 questions, one at a time, and ends the interview with a closing message.
+
 ### Contributing: dev mode
 
 ```bash
