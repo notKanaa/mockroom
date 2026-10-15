@@ -12,6 +12,7 @@ export default defineConfig({
   },
   server: {
     // In dev mode the API runs separately (src/server/dev.ts).
-    proxy: { "/api": `http://127.0.0.1:${apiPort}` },
+    // The trailing slash matters: "/api" alone would also catch the UI module src/ui/api.ts.
+    proxy: { "/api/": `http://127.0.0.1:${apiPort}` },
   },
 });
