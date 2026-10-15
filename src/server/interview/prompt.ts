@@ -1,0 +1,59 @@
+import type { ChatMessage } from "../ai/model.js";
+import type { Pack } from "../packs/pack.js";
+import type { TranscriptEntry } from "./types.js";
+
+/** What the interviewer must say in its next message. */
+export type InterviewerStep =
+  | { kind: "open"; question: string }
+  | { kind: "ask"; questionNumber: number; question: string }
+  | { kind: "close" };
+
+const languageNames: Record<Pack["language"], string> = { en: "English", fr: "French" };
+
+/** Opens every conversation, since some providers require it to start with the user. */
+export const candidateJoinedMessage = "Hello, I'm ready for the interview.";
+
+/** Builds the conversation sent to the AI model for the interviewer's next message. */
+export function interviewerPrompt(
+  pack: Pack,
+  totalQuestions: number,
+  transcript: TranscriptEntry[],
+  step: InterviewerStep,
+): ChatMessage[] {
+  return [
+    { role: "system", content: systemPrompt(pack, totalQuestions, step) },
+    { role: "user", content: candidateJoinedMessage },
+    ...transcript.map(
+      ({ role, content }): ChatMessage => ({
+        role: role === "interviewer" ? "assistant" : "user",
+        content,
+      }),
+    ),
+  ];
+}
+
+function systemPrompt(pack: Pack, totalQuestions: number, step: InterviewerStep): string {
+  return `You are a friendly, professional technical interviewer running a mock job interview for a ${pack.level} ${pack.technology} developer position. Conduct the interview in ${languageNames[pack.language]}.
+
+Rules:
+- Ask exactly one question per message: the one you are told to ask next. You may rephrase it slightly so it sounds natural, but keep its meaning.
+- Never reveal, explain or hint at the answer to any question, even if the candidate asks for it or says they don't know.
+- Never correct, grade or comment on the quality of the candidate's answers. They get detailed feedback in a separate debrief after the interview.
+- If the candidate asks for the answer or wants to skip, kindly say you'll move on, then follow your instruction for the next message.
+- Keep messages short and conversational, with no headings or bullet lists.
+
+The interview has ${totalQuestions} questions.
+
+Your next message: ${stepInstruction(step, totalQuestions)}`;
+}
+
+function stepInstruction(step: InterviewerStep, totalQuestions: number): string {
+  switch (step.kind) {
+    case "open":
+      return `greet the candidate in one or two sentences, tell them the interview has ${totalQuestions} questions, then ask question 1: "${step.question}"`;
+    case "ask":
+      return `briefly and neutrally acknowledge the candidate's last answer without judging it, then ask question ${step.questionNumber}: "${step.question}"`;
+    case "close":
+      return "briefly and neutrally acknowledge the candidate's last answer without judging it, thank them, and tell them the interview is over. Do not ask any more questions and do not give feedback or answers.";
+  }
+}

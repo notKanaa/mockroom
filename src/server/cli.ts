@@ -4,8 +4,8 @@ import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { parseArgs } from "node:util";
 import open from "open";
-import { unconfiguredModel } from "./ai/unconfigured-model.js";
 import { startServer } from "./server.js";
+import { loadModelOrExit } from "./startup.js";
 
 const { values: flags } = parseArgs({
   options: { open: { type: "boolean", default: true } },
@@ -19,7 +19,7 @@ if (!existsSync(join(uiDir, "index.html"))) {
   process.exit(1);
 }
 
-const server = await startServer({ model: unconfiguredModel, uiDir });
+const server = await startServer({ model: loadModelOrExit(), uiDir });
 console.log(`Mockroom is running at ${server.url}`);
 console.log("Press Ctrl+C to stop.");
 
