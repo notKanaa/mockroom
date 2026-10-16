@@ -28,24 +28,30 @@ To get the real `mockroom` command in your shell, run `npm link` after building.
 
 ### Choose your AI
 
-Until the settings screen arrives, Mockroom picks its AI from environment variables. The easiest way is to copy `.env.example` to `.env` and fill it in: `npm start` and `npm run dev` read it.
+The first time you open Mockroom, it takes you to **Settings**: pick OpenAI, Anthropic, Gemini, or [Ollama](https://ollama.com) to run a free model on your computer, choose a model, enter your API key (Ollama needs none), then **Test connection**. You can come back to Settings at any time; changes apply right away, no restart needed.
+
+Your settings and API keys are saved in `settings.json` in Mockroom's data folder (see [Past interviews](#past-interviews)), on your computer only. A key is only ever sent to the provider it belongs to, and Mockroom's screens only show its last 4 characters.
+
+With Ollama, Mockroom lists the models you have installed. To get one, run `ollama pull llama3.2`.
+
+#### Environment variables
+
+You can also choose the AI with environment variables, for example in a `.env` file (copy `.env.example`): `npm start` and `npm run dev` read it. **They override what is saved in Settings**, which then says so.
 
 | Variable              | What it does                                                                 |
 | --------------------- | ---------------------------------------------------------------------------- |
 | `MOCKROOM_PROVIDER`   | `openai`, `anthropic`, `gemini` or `ollama`                                  |
 | `MOCKROOM_MODEL`      | The model to use. Optional, except for Ollama (e.g. `llama3.2`)              |
-| `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, `GEMINI_API_KEY` | Your key for the chosen provider. Ollama needs none |
+| `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, `GEMINI_API_KEY` | Your key for the provider. Ollama needs none |
 | `MOCKROOM_OLLAMA_URL` | Where Ollama runs. Defaults to `http://127.0.0.1:11434`                      |
 | `MOCKROOM_FOLLOW_UPS` | The most follow-up questions the interviewer asks on one question. Defaults to `2`; `0` turns them off |
-| `MOCKROOM_DATA_DIR`   | Where Mockroom keeps your data, such as past interviews. Defaults to the usual folder for app data (see below) |
-
-Your key is only sent to the provider you chose.
+| `MOCKROOM_DATA_DIR`   | Where Mockroom keeps your data (settings and past interviews). Defaults to the usual folder for app data (see below) |
 
 Pick an **interview pack** (filter them by technology, level and language): the interviewer asks up to 5 of its questions, one at a time, and ends the interview with a closing message. When an answer is vague or misses key points of the pack, the interviewer asks a follow-up question before moving on, like a real recruiter, but never gives the answer away. For now there is one built-in sample pack (React, junior, in English).
 
 ### Past interviews
 
-Every interview you finish or end early is saved on your computer, with its full transcript and debrief. Open **Past interviews** on the home screen to read one again or delete it. There is no account and nothing is sent anywhere: each interview is a JSON file in the `interviews` folder of Mockroom's data folder (`npm start` prints its path when it starts):
+Every interview you finish or end early is saved on your computer, with its full transcript and debrief. Open **Past interviews** on the home screen to read one again or delete it. There is no account and nothing is sent anywhere: each interview is a JSON file in the `interviews` folder of Mockroom's data folder (`npm start` prints its path when it starts), next to `settings.json`:
 
 | System          | Data folder                                                       |
 | --------------- | ----------------------------------------------------------------- |

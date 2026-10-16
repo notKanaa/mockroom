@@ -1,21 +1,23 @@
 import { join } from "node:path";
-import type { AIModel } from "./ai/model.js";
-import { modelFromEnv } from "./ai/provider.js";
+import { providerConfigFromEnv, type Env } from "./ai/provider.js";
 import { mockroomDataDir } from "./data-dir.js";
 import { loadPacks } from "./packs/library.js";
 import type { Pack } from "./packs/pack.js";
 import { formatPackProblem } from "./packs/parse.js";
 
-/** Loads the AI model from the environment and says which one is used. Exits when the settings are wrong. */
-export function loadModelOrExit(): AIModel {
+/**
+ * Checks the AI provider environment variables, which override the settings
+ * screen, and says where the provider choice comes from. Exits when they are wrong.
+ */
+export function loadEnvOrExit(dataDir: string): Env {
   try {
-    const { model, config } = modelFromEnv(process.env);
+    const config = providerConfigFromEnv(process.env);
     console.log(
       config
-        ? `AI provider: ${config.provider} (${config.model})`
-        : "No AI provider configured: set MOCKROOM_PROVIDER (see the README).",
+        ? `AI provider: ${config.provider} (${config.model}), from environment variables. They override the settings screen.`
+        : `AI provider: chosen on the settings screen, saved in ${join(dataDir, "settings.json")}`,
     );
-    return model;
+    return process.env;
   } catch (error) {
     console.error(error instanceof Error ? error.message : error);
     process.exit(1);

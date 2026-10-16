@@ -2,8 +2,8 @@ import { homedir } from "node:os";
 import { join, resolve } from "node:path";
 
 /**
- * The folder where Mockroom keeps this user's data (interview history, and
- * settings later on). Nothing in it ever leaves the machine.
+ * The folder where Mockroom keeps this user's data (interview history and
+ * settings). Nothing in it ever leaves the machine.
  *
  * MOCKROOM_DATA_DIR overrides it, which is how tests use a temporary folder.
  * Otherwise it is the usual place for app data on each system:

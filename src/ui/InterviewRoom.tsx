@@ -1,14 +1,15 @@
-import { useEffect, useRef, useState, type FormEvent, type KeyboardEvent } from "react";
+import { useEffect, useRef, type FormEvent, type KeyboardEvent } from "react";
 import { Message } from "./Message";
 import type { useInterview } from "./useInterview";
 
 interface InterviewRoomProps {
   session: ReturnType<typeof useInterview>;
+  /** Opens the AI provider settings, for when the provider fails. The interview is kept. */
+  onOpenSettings: () => void;
 }
 
-export function InterviewRoom({ session }: InterviewRoomProps) {
-  const { interview, messages, streaming, error, ending, endError, debrief } = session;
-  const [draft, setDraft] = useState("");
+export function InterviewRoom({ session, onOpenSettings }: InterviewRoomProps) {
+  const { interview, messages, streaming, error, ending, endError, debrief, draft, setDraft } = session;
   const chatRef = useRef<HTMLOListElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const finished = interview?.status === "finished";
@@ -92,7 +93,10 @@ export function InterviewRoom({ session }: InterviewRoomProps) {
 
       {error && (
         <p className="room-error" role="alert">
-          {error} Your answer was not sent; you can send it again.
+          {error} Your answer was not sent; you can send it again.{" "}
+          <button type="button" className="link-button" onClick={onOpenSettings}>
+            Open settings
+          </button>
         </p>
       )}
       {endError && (
@@ -111,6 +115,9 @@ export function InterviewRoom({ session }: InterviewRoomProps) {
               <div className="room-done-actions">
                 <button type="button" className="secondary-button" onClick={session.reset}>
                   Back to packs
+                </button>
+                <button type="button" className="secondary-button" onClick={onOpenSettings}>
+                  Settings
                 </button>
                 <button type="button" onClick={session.retryDebrief}>
                   Try again
