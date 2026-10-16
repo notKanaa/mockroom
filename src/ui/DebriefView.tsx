@@ -1,5 +1,5 @@
 import type { Debrief, DebriefQuestion, InterviewSummary } from "../server/api-types";
-import { useI18n } from "./i18n";
+import { interviewTitle, useI18n } from "./i18n";
 
 interface DebriefViewProps {
   interview: InterviewSummary;
@@ -13,7 +13,7 @@ export function DebriefView({ interview, debrief, onDone }: DebriefViewProps) {
   return (
     <main className="debrief">
       <header className="debrief-header">
-        <p className="room-pack">{interview.pack.title}</p>
+        <p className="room-pack">{interviewTitle(interview, t)}</p>
         <h1>{t.debrief.title}</h1>
       </header>
 
@@ -64,8 +64,10 @@ function QuestionFeedback({ question }: { question: DebriefQuestion }) {
     <li className="feedback">
       <p className="feedback-theme">
         {t.common.question(question.number)} · {question.theme}
+        {question.uncurated && <span className="uncurated-badge">{t.common.uncurated}</span>}
       </p>
       <h2 className="feedback-question">{question.question}</h2>
+      {question.uncurated && <p className="feedback-note">{t.debrief.uncuratedNote}</p>}
 
       {question.strengths.length > 0 && (
         <section className="feedback-section feedback-strengths">
@@ -96,14 +98,16 @@ function QuestionFeedback({ question }: { question: DebriefQuestion }) {
         <p className="feedback-answer">{question.modelAnswer}</p>
       </section>
 
-      <section className="feedback-section">
-        <h3>{t.debrief.toStudy}</h3>
-        <p>
-          <a href={question.resource.url} target="_blank" rel="noreferrer">
-            {question.resource.title}
-          </a>
-        </p>
-      </section>
+      {question.resource && (
+        <section className="feedback-section">
+          <h3>{t.debrief.toStudy}</h3>
+          <p>
+            <a href={question.resource.url} target="_blank" rel="noreferrer">
+              {question.resource.title}
+            </a>
+          </p>
+        </section>
+      )}
     </li>
   );
 }

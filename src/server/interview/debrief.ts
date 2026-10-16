@@ -1,15 +1,16 @@
+import { isRecord, readJsonObject } from "../ai/json-reply.js";
 import { collectText, type AIModel, type ChatMessage } from "../ai/model.js";
-import { LocalizedError, type Language } from "../i18n.js";
+import { LocalizedError } from "../i18n.js";
 import { say } from "../messages.js";
-import type { Pack, PackResource } from "../packs/pack.js";
+import type { PackResource } from "../packs/pack.js";
 import { languageNames, translationNote, type PlannedQuestion } from "./prompt.js";
+import { positionDescription, type InterviewSetup } from "./setup.js";
 import type { Debrief, DebriefQuestion, TranscriptEntry } from "./types.js";
 
 /** What the debrief is written from. */
 export interface DebriefRequest {
-  pack: Pack;
-  /** The language to write the debrief in. */
-  language: Language;
+  /** What the interview was built from, the language to write the debrief in included. */
+  setup: InterviewSetup;
   /** The questions the candidate answered, in order. Question 1 first. */
   answered: PlannedQuestion[];
   totalQuestions: number;
@@ -47,16 +48,16 @@ export async function writeDebrief(model: AIModel, request: DebriefRequest): Pro
   throw new DebriefFormatError(say("debriefUnreadable", problem));
 }
 
-function debriefPrompt({ pack, language, answered, totalQuestions, transcript, endedEarly }: DebriefRequest): ChatMessage[] {
+function debriefPrompt({ setup, answered, totalQuestions, transcript, endedEarly }: DebriefRequest): ChatMessage[] {
   const coverage = endedEarly
     ? `The candidate ended the interview early, after answering ${answered.length} of the ${totalQuestions} questions. Give feedback on these ${answered.length} questions only:`
     : `The candidate answered all ${totalQuestions} questions:`;
 
-  const system = `You are a friendly technical interviewer writing the debrief of a mock job interview for a ${pack.level} ${pack.technology} developer position, from the "${pack.title}" interview pack. Write every text in ${languageNames[language]}, even though these instructions are in English, but keep the JSON keys in English.${translationNote(pack, language)}
+  const system = `You are a friendly technical interviewer writing the debrief of a mock job interview for a ${positionDescription(setup)} position. Write every text in ${languageNames[setup.language]}, even though these instructions are in English, but keep the JSON keys in English.${translationNote(setup)}
 
 ${coverage}
 
-${answered.map((question, index) => describeQuestion(index + 1, question)).join("\n\n")}
+${answered.map((question, index) => describeQuestion(index + 1, question, setup)).join("\n\n")}
 
 The transcript is grouped by question. The interviewer may have asked follow-up questions on a question to dig into the answer: they belong to that question, so judge the candidate's first answer and their answers to its follow-ups together, as one answer. Never write a separate entry for a follow-up.
 
@@ -64,7 +65,12 @@ For each of these questions, judge what the candidate actually said in the trans
 - "strengths": what the answer got right, as short points. Be specific and sincere. If the candidate didn't know, credit any honest attempt or partial idea; leave it empty only if there is really nothing.
 - "gaps": the key points the answer missed or got wrong, as short points phrased as things to add. Leave it empty if nothing important is missing.
 - "modelAnswer": a short answer, a few sentences long, that covers the key points the way a strong candidate would say it.
-- "resource": the number of the resource listed for that question that best helps with the gaps.
+- "resource": the number of the resource listed for that question that best helps with the gaps.${
+    answered.some((question) => question.kind === "uncurated")
+      ? `
+- For a question the interviewer wrote itself, which has no resources listed, also give "question": the question asked, in one short sentence. Instead of "resource", give "resourceTitle" and "resourceUrl": the title and https:// link of a page of the technology's official documentation that helps with the gaps. Only give a page you are sure exists.`
+      : ""
+  }
 
 Then "summary": two or three encouraging sentences on the interview as a whole, ending with what to focus on next.
 
@@ -94,7 +100,11 @@ function transcriptByQuestion(transcript: TranscriptEntry[]): string {
   return sections.map((lines) => lines.join("\n\n")).join("\n\n---\n\n");
 }
 
-function describeQuestion(number: number, { theme, text }: PlannedQuestion): string {
+function describeQuestion(number: number, question: PlannedQuestion, { level }: InterviewSetup): string {
+  if (question.kind === "uncurated") {
+    return `Question ${number}, on ${question.technology}: no pack covers ${question.technology}, so the interviewer wrote this question itself. Read it in the transcript, and judge the answer against what a good ${level} developer would say.`;
+  }
+  const { theme, text } = question;
   return `Question ${number}, on the theme "${theme.name}": "${text}"
 Key points of a good answer:
 ${theme.keyPoints.map((point) => `- ${point}`).join("\n")}
@@ -103,18 +113,10 @@ ${theme.resources.map((resource, index) => `${index + 1}. ${resource.title} (${r
 }
 
 /** Turns the model's reply into a debrief, or says what is wrong with it. */
-function parseDebrief(reply: string, { answered, endedEarly }: DebriefRequest): Debrief | string {
-  const start = reply.indexOf("{");
-  const end = reply.lastIndexOf("}");
-  if (start === -1 || end < start) return "it contains no JSON object";
-
-  let data: unknown;
-  try {
-    data = JSON.parse(reply.slice(start, end + 1));
-  } catch {
-    return "it isn't valid JSON";
-  }
-  if (!isRecord(data)) return "it isn't a JSON object";
+function parseDebrief(reply: string, { answered, endedEarly, transcript }: DebriefRequest): Debrief | string {
+  if (!reply.includes("{")) return "it contains no JSON object";
+  const data = readJsonObject(reply);
+  if (!data) return "it isn't valid JSON";
   if (!Array.isArray(data.questions)) return '"questions" must be a list';
   const items: unknown[] = data.questions;
 
@@ -133,15 +135,24 @@ function parseDebrief(reply: string, { answered, endedEarly }: DebriefRequest): 
       return `question ${number}: "modelAnswer" must be a non-empty text`;
     }
 
-    questions.push({
-      number,
-      theme: planned.theme.name,
-      question: planned.text,
-      strengths,
-      gaps,
-      modelAnswer: item.modelAnswer.trim(),
-      resource: pickResource(planned.theme.resources, item.resource),
-    });
+    const feedback = { number, strengths, gaps, modelAnswer: item.modelAnswer.trim() };
+    if (planned.kind === "pack") {
+      questions.push({
+        ...feedback,
+        theme: planned.theme.name,
+        question: planned.text,
+        resource: pickResource(planned.theme.resources, item.resource),
+      });
+    } else {
+      const resource = ownResource(item);
+      questions.push({
+        ...feedback,
+        theme: planned.technology,
+        question: nonEmptyText(item.question) ?? askedQuestion(transcript, number),
+        ...(resource && { resource }),
+        uncurated: true,
+      });
+    }
   }
 
   // The summary is a nice extra: small local models often leave it out, and the
@@ -157,11 +168,36 @@ function pickResource(resources: PackResource[], pick: unknown): PackResource {
   return { title, url };
 }
 
+/**
+ * The resource the model suggested itself, if it looks like a real link. Read
+ * from "resourceTitle" and "resourceUrl", or a "resource" object. Left out otherwise.
+ */
+function ownResource(item: Record<string, unknown>): PackResource | undefined {
+  const nested = isRecord(item.resource) ? item.resource : {};
+  const title = nonEmptyText(item.resourceTitle) ?? nonEmptyText(nested.title);
+  const url = nonEmptyText(item.resourceUrl) ?? nonEmptyText(nested.url);
+  if (!title || !url || !/^https:\/\/[^\s/]+\.[^\s]+$/.test(url)) return undefined;
+  return { title, url };
+}
+
+/**
+ * The question the interviewer asked, for when the model doesn't restate it:
+ * the last sentence ending with a question mark in its message, or the whole message.
+ */
+function askedQuestion(transcript: TranscriptEntry[], number: number): string {
+  const asked = transcript.find(
+    (entry) => entry.role === "interviewer" && entry.questionNumber === number && !entry.followUpNumber,
+  );
+  const message = asked?.content.trim() ?? "";
+  const sentences = message.split(/(?<=[.!?:])\s+|\n+/).map((sentence) => sentence.trim());
+  return sentences.findLast((sentence) => sentence.endsWith("?")) ?? message;
+}
+
+function nonEmptyText(value: unknown): string | undefined {
+  return typeof value === "string" && value.trim() !== "" ? value.trim() : undefined;
+}
+
 function textList(value: unknown): string[] | undefined {
   if (!Array.isArray(value) || !value.every((entry) => typeof entry === "string")) return undefined;
   return value.map((entry: string) => entry.trim()).filter((entry) => entry !== "");
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
 }

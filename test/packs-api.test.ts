@@ -61,7 +61,7 @@ describe("Pack picker API", () => {
     const second = await client.answer(first.interview!.id, "Une fonction qui utilise yield.");
 
     expect(first.interview).toMatchObject({
-      pack: { id: "python-mid-fr", title: "Python — Confirmé" },
+      packs: [{ id: "python-mid-fr", title: "Python — Confirmé" }],
       questionNumber: 1,
       // Two themes, asked in turn: Générateurs, Décorateurs, then Générateurs again.
       totalQuestions: 3,

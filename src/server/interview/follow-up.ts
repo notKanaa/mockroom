@@ -1,11 +1,11 @@
 import { collectText, type AIModel, type ChatMessage } from "../ai/model.js";
-import type { Pack } from "../packs/pack.js";
 import type { PlannedQuestion } from "./prompt.js";
+import { positionDescription, type InterviewSetup } from "./setup.js";
 import type { TranscriptEntry } from "./types.js";
 
 /** What the decision to follow up is made from. */
 export interface FollowUpRequest {
-  pack: Pack;
+  setup: InterviewSetup;
   question: PlannedQuestion;
   /** The messages on the current question so far: the question, the candidate's answer, and any follow-ups. */
   exchange: TranscriptEntry[];
@@ -22,12 +22,16 @@ export async function shouldFollowUp(model: AIModel, request: FollowUpRequest): 
   return decision !== undefined && /^follow/i.test(decision);
 }
 
-function followUpPrompt({ pack, question, exchange }: FollowUpRequest): ChatMessage[] {
-  const system = `You are helping run a mock job interview for a ${pack.level} ${pack.technology} developer position. Decide whether the interviewer should ask a follow-up question on the current question before moving on, the way a real recruiter would.
-
-The current question, on the theme "${question.theme.name}": "${question.text}"
+function followUpPrompt({ setup, question, exchange }: FollowUpRequest): ChatMessage[] {
+  const current =
+    question.kind === "uncurated"
+      ? `The current question is on ${question.technology}. No pack covers it, so the interviewer wrote the question itself (see the conversation): judge the answers against what a good ${setup.level} developer would say.`
+      : `The current question, on the theme "${question.theme.name}": "${question.text}"
 Key points of a good answer:
-${question.theme.keyPoints.map((point) => `- ${point}`).join("\n")}
+${question.theme.keyPoints.map((point) => `- ${point}`).join("\n")}`;
+  const system = `You are helping run a mock job interview for a ${positionDescription(setup)} position. Decide whether the interviewer should ask a follow-up question on the current question before moving on, the way a real recruiter would.
+
+${current}
 
 Reply FOLLOW-UP when the candidate's answers so far are vague, too short, or miss an important key point that a follow-up question could bring out.
 Reply NEXT when they cover the key points reasonably well, when the candidate says they don't know or wants to move on, or when the last follow-up brought nothing new.

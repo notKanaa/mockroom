@@ -1,11 +1,11 @@
 import { useEffect, useState } from "react";
-import type { Language, PackSummary } from "../server/api-types";
+import type { InterviewRequest, PackSummary } from "../server/api-types";
 import { fetchSettings, listPacks } from "./api";
 import { DebriefView } from "./DebriefView";
 import { HistoryList, SavedInterviewView } from "./History";
 import { LanguageSwitch, useI18n } from "./i18n";
 import { InterviewRoom } from "./InterviewRoom";
-import { PackPicker } from "./PackPicker";
+import { InterviewSetup } from "./InterviewSetup";
 import { Settings } from "./Settings";
 import { useInterview } from "./useInterview";
 
@@ -79,7 +79,7 @@ function CurrentScreen() {
 interface HomeProps {
   starting: boolean;
   error: string | null;
-  onStart: (packId: string, language: Language) => void;
+  onStart: (request: InterviewRequest) => void;
   onShowHistory: () => void;
   onOpenSettings: () => void;
 }
@@ -123,7 +123,7 @@ function Home({ starting, error, onStart, onShowHistory, onOpenSettings }: HomeP
           </button>
         </p>
       )}
-      {packs && <PackPicker packs={packs} starting={starting} onStart={onStart} />}
+      {packs && <InterviewSetup packs={packs} starting={starting} onStart={onStart} />}
     </main>
   );
 }

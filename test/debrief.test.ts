@@ -134,7 +134,7 @@ describe("Debrief API", () => {
     expect(debrief?.endedEarly).toBe(true);
     expect(debrief?.questions.map((question) => question.theme)).toEqual(["Components and JSX", "Props and state"]);
     // A resource number that isn't in the pack falls back to the theme's first resource.
-    expect(debrief?.questions[1]?.resource.title).toBe("Passing Props to a Component");
+    expect(debrief?.questions[1]?.resource?.title).toBe("Passing Props to a Component");
 
     const system = model.calls.at(-1)![0]?.content;
     expect(system).toContain("ended the interview early, after answering 2 of the 5 questions");
@@ -185,6 +185,21 @@ describe("Debrief API", () => {
     expect(debrief?.summary).toBe("");
     expect(debrief?.questions.map((question) => question.number)).toEqual([1, 2]);
     expect(model.calls).toHaveLength(4);
+  });
+
+  it("repairs the broken JSON small local models write: trailing commas, missing closing brackets", async () => {
+    // As llama3.2 writes it: a trailing comma, and the reply stops before the last brackets.
+    const broken = `{"questions":[{"number":1,"strengths":["Knows JSX",],"gaps":[],"modelAnswer":"JSX compiles to function calls.","resource":1}],"summary":"Well done`;
+    const { client, model } = await setUp([...interviewerScript.slice(0, 2), broken]);
+    const id = await answerQuestions(client, 1);
+    await client.end(id);
+
+    const { status, body: debrief } = await client.debrief(id);
+
+    expect(status).toBe(200);
+    expect(debrief?.questions[0]).toMatchObject({ strengths: ["Knows JSX"], modelAnswer: "JSX compiles to function calls." });
+    expect(debrief?.summary).toBe("Well done");
+    expect(model.calls).toHaveLength(3);
   });
 
   it("reports a clear error when the debrief is malformed twice, and can try again", async () => {

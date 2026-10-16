@@ -13,8 +13,17 @@ export interface SavedInterview {
   /** When the interview started and finished, as ISO 8601 dates. */
   startedAt: string;
   finishedAt: string;
-  /** The packs the interview was built from. One for now. */
+  /** The packs the interview was built from. Can be empty when every technology was uncurated. */
   packs: SavedPack[];
+  /**
+   * The technologies the candidate confirmed from a job offer: empty without one.
+   * Missing from interviews saved before job offers existed, like the next two fields.
+   */
+  technologies?: string[];
+  /** The technologies no pack covered, asked from the AI model's own knowledge. */
+  uncurated?: string[];
+  /** The level the interview was pitched at. */
+  level?: PackLevel;
   /** The language the interview was held in. */
   language: PackLanguage;
   totalQuestions: number;

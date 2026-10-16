@@ -5,13 +5,24 @@ import { stream } from "hono/streaming";
 import { collectText, type AIModel } from "./ai/model.js";
 import type { Env } from "./ai/provider.js";
 import { ProviderError } from "./ai/provider-errors.js";
-import type { ApiError, InterviewSummary, OllamaModels, PackSummary, TurnEvent } from "./api-types.js";
+import type {
+  ApiError,
+  InterviewSummary,
+  JobOfferDetection,
+  OllamaModels,
+  PackMatches,
+  PackSummary,
+  TurnEvent,
+} from "./api-types.js";
 import { InterviewHistory } from "./history/store.js";
-import { isLanguage, languageFromHeader, localizedMessage, type Language } from "./i18n.js";
+import { isLanguage, languageFromHeader, localizedMessage, type Language, type Text } from "./i18n.js";
 import { InterviewEngine, InterviewError, type InterviewErrorCode, type InterviewTurn } from "./interview/engine.js";
+import type { InterviewSetup } from "./interview/setup.js";
+import { cleanTechnologies, detectJobOffer, DetectionError } from "./job-offer/detect.js";
+import { matchPacks, uncoveredTechnologies } from "./job-offer/match.js";
 import { say } from "./messages.js";
 import { filterPacks } from "./packs/library.js";
-import type { Pack } from "./packs/pack.js";
+import { packLevels, type Pack, type PackLevel } from "./packs/pack.js";
 import { AISettings, SettingsError, type Connect } from "./settings/ai-settings.js";
 
 export interface AppOptions {
@@ -113,14 +124,47 @@ export function createApp({
     );
   });
 
-  app.post("/api/interviews", async (c) => {
-    const { packId, language } = await readJsonBody(c);
-    const pack = packs.find((candidate) => candidate.id === packId);
-    if (!pack) return c.json<ApiError>({ error: say("packNotFound")(uiLanguage(c)) }, 404);
-    if (language !== undefined && !isLanguage(language)) {
-      return c.json<ApiError>({ error: say("invalidLanguage")(uiLanguage(c)) }, 400);
+  // Finds the technologies and level a pasted job offer asks for, and the packs matching them.
+  app.post("/api/job-offers/detect", async (c) => {
+    const { jobOffer, language } = await readJsonBody(c);
+    const ui = uiLanguage(c);
+    if (typeof jobOffer !== "string" || jobOffer.trim() === "") {
+      return c.json<ApiError>({ error: say("emptyJobOffer")(ui) }, 400);
     }
-    return streamTurn(c, engine.start(pack, language));
+    if (language !== undefined && !isLanguage(language)) {
+      return c.json<ApiError>({ error: say("invalidLanguage")(ui) }, 400);
+    }
+    try {
+      const detection = await detectJobOffer(
+        model,
+        jobOffer,
+        packs.map((pack) => pack.technology),
+      );
+      const matches = matchPacks(packs, detection.technologies, detection.level, language ?? ui);
+      return c.json<JobOfferDetection>({ ...detection, matches });
+    } catch (error) {
+      if (error instanceof DetectionError) return c.json<ApiError>({ error: error.text(ui) }, 422);
+      return c.json<ApiError>({ error: say("detectionFailed", localizedMessage(error, ui))(ui) }, 502);
+    }
+  });
+
+  // The packs matching the technologies and level, once the candidate has edited them.
+  app.post("/api/job-offers/match", async (c) => {
+    const body = await readJsonBody(c);
+    const ui = uiLanguage(c);
+    const technologies = readTechnologies(body.technologies);
+    if (!technologies) return c.json<ApiError>({ error: say("technologiesShape")(ui) }, 400);
+    if (!isLevel(body.level)) return c.json<ApiError>({ error: say("invalidLevel")(ui) }, 400);
+    if (body.language !== undefined && !isLanguage(body.language)) {
+      return c.json<ApiError>({ error: say("invalidLanguage")(ui) }, 400);
+    }
+    return c.json<PackMatches>({ matches: matchPacks(packs, technologies, body.level, body.language ?? ui) });
+  });
+
+  app.post("/api/interviews", async (c) => {
+    const setup = readInterviewSetup(await readJsonBody(c), packs);
+    if ("error" in setup) return c.json<ApiError>({ error: setup.error(uiLanguage(c)) }, setup.status);
+    return streamTurn(c, engine.start(setup));
   });
 
   app.get("/api/interviews/:id", (c) => c.json(engine.get(c.req.param("id"))));
@@ -201,6 +245,49 @@ function streamTurn(c: Context, turn: InterviewTurn): Response {
       await send({ type: "error", message: localizedMessage(error, language) });
     }
   });
+}
+
+/**
+ * The setup of a new interview, from the body of `POST /api/interviews` (see
+ * `InterviewRequest`), or what is wrong with it.
+ */
+function readInterviewSetup(
+  body: Record<string, unknown>,
+  library: readonly Pack[],
+): InterviewSetup | { error: Text; status: ContentfulStatusCode } {
+  const { packId, packIds = packId === undefined ? [] : [packId], level, language } = body;
+  if (!Array.isArray(packIds) || !packIds.every((id) => typeof id === "string")) {
+    return { error: say("packIdsShape"), status: 400 };
+  }
+  const packs: Pack[] = [];
+  for (const id of new Set(packIds)) {
+    const pack = library.find((candidate) => candidate.id === id);
+    if (!pack) return { error: say("packNotFound"), status: 404 };
+    packs.push(pack);
+  }
+  const technologies = body.technologies === undefined ? [] : readTechnologies(body.technologies);
+  if (!technologies) return { error: say("technologiesShape"), status: 400 };
+  if (level !== undefined && !isLevel(level)) return { error: say("invalidLevel"), status: 400 };
+  if (language !== undefined && !isLanguage(language)) return { error: say("invalidLanguage"), status: 400 };
+  if (packs.length === 0 && technologies.length === 0) return { error: say("emptySetup"), status: 400 };
+
+  return {
+    packs,
+    technologies,
+    uncurated: uncoveredTechnologies(technologies, packs),
+    level: level ?? packs[0]?.level ?? "mid",
+    language: language ?? packs[0]?.language ?? "en",
+  };
+}
+
+/** A list of technology names, cleaned; undefined if it isn't a list of texts. */
+function readTechnologies(value: unknown): string[] | undefined {
+  if (!Array.isArray(value) || !value.every((name) => typeof name === "string")) return undefined;
+  return cleanTechnologies(value);
+}
+
+function isLevel(value: unknown): value is PackLevel {
+  return typeof value === "string" && (packLevels as readonly string[]).includes(value);
 }
 
 async function readJsonBody(c: Context): Promise<Record<string, unknown>> {

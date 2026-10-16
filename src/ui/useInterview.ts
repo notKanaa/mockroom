@@ -1,5 +1,5 @@
 import { useState } from "react";
-import type { Debrief, InterviewSummary, Language, TranscriptEntry, TurnEvent } from "../server/api-types";
+import type { Debrief, InterviewRequest, InterviewSummary, TranscriptEntry, TurnEvent } from "../server/api-types";
 import { endInterview, fetchDebrief, sendAnswer, startInterview } from "./api";
 
 interface InterviewState {
@@ -86,8 +86,7 @@ export function useInterview() {
     debrief,
     draft,
     setDraft,
-    start: (packId: string, language: Language) =>
-      playTurn(empty, [], (onEvent) => startInterview(packId, language, onEvent)),
+    start: (request: InterviewRequest) => playTurn(empty, [], (onEvent) => startInterview(request, onEvent)),
     answer: async (text: string) => {
       const { interview } = state;
       if (!interview) return false;
