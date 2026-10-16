@@ -1,12 +1,15 @@
 import { useState } from "react";
-import type { PackLanguage, PackLevel, PackSummary } from "../server/api-types";
-import { languageLabels, levelLabels } from "./labels";
+import type { Language, PackLevel, PackSummary } from "../server/api-types";
+import { languages, useI18n } from "./i18n";
 
 interface PackPickerProps {
   packs: PackSummary[];
   starting: boolean;
-  onStart: (packId: string) => void;
+  /** Starts an interview on the pack, held in `language`. */
+  onStart: (packId: string, language: Language) => void;
 }
+
+const levels: readonly PackLevel[] = ["junior", "mid", "senior"];
 
 interface Filters {
   technology: string;
@@ -16,16 +19,21 @@ interface Filters {
 
 const noFilters: Filters = { technology: "", level: "", language: "" };
 
-/** Lists the packs, filterable by technology, level and language. Each one starts an interview. */
+/**
+ * Lists the packs, filterable by technology, level and language. Each one starts
+ * an interview, in the interview language picked above the list.
+ */
 export function PackPicker({ packs, starting, onStart }: PackPickerProps) {
+  const { language, t } = useI18n();
   const [filters, setFilters] = useState<Filters>(noFilters);
   const [chosenId, setChosenId] = useState<string | null>(null);
+  // Follows the interface language until the candidate picks one.
+  const [pickedLanguage, setPickedLanguage] = useState<Language | null>(null);
+  const interviewLanguage = pickedLanguage ?? language;
 
   const technologies = unique(packs.map((pack) => pack.technology)).sort((a, b) => a.localeCompare(b));
-  const levels = (Object.keys(levelLabels) as PackLevel[]).filter((level) => packs.some((pack) => pack.level === level));
-  const languages = (Object.keys(languageLabels) as PackLanguage[]).filter((language) =>
-    packs.some((pack) => pack.language === language),
-  );
+  const packLevels = levels.filter((level) => packs.some((pack) => pack.level === level));
+  const packLanguages = languages.filter((candidate) => packs.some((pack) => pack.language === candidate));
 
   const shown = packs.filter(
     (pack) =>
@@ -38,7 +46,7 @@ export function PackPicker({ packs, starting, onStart }: PackPickerProps) {
   if (packs.length === 0) {
     return (
       <p className="status status-unreachable" role="alert">
-        No interview pack is available. The terminal running Mockroom lists the packs it couldn't load.
+        {t.picker.noPacks}
       </p>
     );
   }
@@ -49,39 +57,59 @@ export function PackPicker({ packs, starting, onStart }: PackPickerProps) {
 
   return (
     <section className="picker" aria-labelledby="picker-title">
-      <h2 id="picker-title">Choose an interview pack</h2>
+      <h2 id="picker-title">{t.picker.title}</h2>
+
+      <fieldset className="interview-language">
+        <legend>{t.picker.interviewLanguage}</legend>
+        <div className="language-choices">
+          {languages.map((option) => (
+            <label
+              key={option}
+              className={`language-choice${option === interviewLanguage ? " language-choice-current" : ""}`}
+            >
+              <input
+                type="radio"
+                name="interview-language"
+                value={option}
+                checked={option === interviewLanguage}
+                onChange={() => setPickedLanguage(option)}
+              />
+              {t.languageNames[option]}
+            </label>
+          ))}
+        </div>
+        <p className="field-hint">{t.picker.interviewLanguageHint}</p>
+      </fieldset>
 
       <div className="filters">
         <FilterSelect
-          label="Technology"
+          label={t.picker.technology}
           value={filters.technology}
-          allLabel="All technologies"
+          allLabel={t.picker.allTechnologies}
           options={technologies.map((technology) => ({ value: technology, label: technology }))}
           onChange={(value) => setFilter("technology", value)}
         />
         <FilterSelect
-          label="Level"
+          label={t.picker.level}
           value={filters.level}
-          allLabel="All levels"
-          options={levels.map((level) => ({ value: level, label: levelLabels[level] }))}
+          allLabel={t.picker.allLevels}
+          options={packLevels.map((level) => ({ value: level, label: t.levels[level] }))}
           onChange={(value) => setFilter("level", value)}
         />
         <FilterSelect
-          label="Language"
+          label={t.picker.packLanguage}
           value={filters.language}
-          allLabel="All languages"
-          options={languages.map((language) => ({ value: language, label: languageLabels[language] }))}
+          allLabel={t.picker.allLanguages}
+          options={packLanguages.map((option) => ({ value: option, label: t.languageNames[option] }))}
           onChange={(value) => setFilter("language", value)}
         />
       </div>
 
       <p className="picker-count" aria-live="polite">
-        {shown.length === 0
-          ? "No pack matches these filters."
-          : `${shown.length} pack${shown.length > 1 ? "s" : ""}`}
+        {shown.length === 0 ? t.picker.noMatch : t.picker.count(shown.length)}
         {filtered && (
           <button type="button" className="link-button" onClick={() => setFilters(noFilters)}>
-            Clear filters
+            {t.picker.clearFilters}
           </button>
         )}
       </p>
@@ -92,7 +120,10 @@ export function PackPicker({ packs, starting, onStart }: PackPickerProps) {
             <div className="pack-info">
               <p className="pack-title">{pack.title}</p>
               <p className="pack-meta">
-                {pack.technology} · {levelLabels[pack.level]} · {languageLabels[pack.language]}
+                {pack.technology} · {t.levels[pack.level]} · {t.languageNames[pack.language]}
+                {pack.language !== interviewLanguage && (
+                  <span className="pack-translated"> · {t.picker.translated(t.languageNames[interviewLanguage])}</span>
+                )}
               </p>
               <p className="pack-themes">{pack.themes.join(" · ")}</p>
             </div>
@@ -101,10 +132,10 @@ export function PackPicker({ packs, starting, onStart }: PackPickerProps) {
               disabled={starting}
               onClick={() => {
                 setChosenId(pack.id);
-                onStart(pack.id);
+                onStart(pack.id, interviewLanguage);
               }}
             >
-              {starting && chosenId === pack.id ? "Starting…" : "Start interview"}
+              {starting && chosenId === pack.id ? t.picker.starting : t.picker.start}
             </button>
           </li>
         ))}

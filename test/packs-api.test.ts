@@ -69,7 +69,7 @@ describe("Pack picker API", () => {
     expect(second.interview).toMatchObject({ questionNumber: 2 });
 
     const [opening, , nextQuestion] = model.calls.map((call) => call[0]!.content);
-    expect(opening).toContain("mid Python developer position. Conduct the interview in French.");
+    expect(opening).toContain("mid Python developer position. Conduct the interview in French: write every message in French");
     expect(opening).toContain('pack, whose themes are: Générateurs, Décorateurs.');
     expect(opening).toContain(`ask question 1, on the theme "Générateurs": "Qu'est-ce qu'un générateur en Python ?"`);
     expect(nextQuestion).toContain('ask question 2, on the theme "Décorateurs": "À quoi sert un décorateur ?"');

@@ -6,20 +6,23 @@ import type {
   Debrief,
   HistoryEntry,
   InterviewSummary,
+  Language,
   OllamaModels,
   PackSummary,
   SavedInterview,
   TurnEvent,
 } from "../server/api-types";
+import { currentLanguage, currentMessages } from "./i18n";
 
 export async function listPacks(): Promise<PackSummary[]> {
-  const response = await fetch("/api/packs");
-  if (!response.ok) throw new Error("The local server can't be reached.");
+  const response = await fetch("/api/packs", { headers: languageHeader() }).catch(() => undefined);
+  if (!response?.ok) throw new Error(currentMessages().common.serverUnreachable);
   return response.json() as Promise<PackSummary[]>;
 }
 
-export function startInterview(packId: string, onEvent: (event: TurnEvent) => void) {
-  return playTurn("/api/interviews", { packId }, onEvent);
+/** Starts an interview on a pack, held in `language`. */
+export function startInterview(packId: string, language: Language, onEvent: (event: TurnEvent) => void) {
+  return playTurn("/api/interviews", { packId, language }, onEvent);
 }
 
 export function sendAnswer(interviewId: string, answer: string, onEvent: (event: TurnEvent) => void) {
@@ -79,13 +82,17 @@ function postJson<T>(path: string): Promise<T> {
 async function requestJson<T>(method: string, path: string, body?: unknown): Promise<T> {
   const init: RequestInit =
     body === undefined
-      ? { method }
-      : { method, headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) };
+      ? { method, headers: languageHeader() }
+      : {
+          method,
+          headers: { ...languageHeader(), "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        };
   const response = await fetch(path, init).catch(() => undefined);
   if (response?.status === 204) return undefined as T;
   const result = (await response?.json().catch(() => undefined)) as T | Partial<ApiError> | undefined;
   if (!response?.ok) {
-    throw new Error((result as Partial<ApiError> | undefined)?.error ?? "The local server can't be reached.");
+    throw new Error((result as Partial<ApiError> | undefined)?.error ?? currentMessages().common.serverUnreachable);
   }
   return result as T;
 }
@@ -94,12 +101,12 @@ async function requestJson<T>(method: string, path: string, body?: unknown): Pro
 async function playTurn(path: string, body: unknown, onEvent: (event: TurnEvent) => void) {
   const response = await fetch(path, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { ...languageHeader(), "Content-Type": "application/json" },
     body: JSON.stringify(body),
-  });
-  if (!response.ok || !response.body) {
-    const { error } = (await response.json().catch(() => ({}))) as Partial<ApiError>;
-    throw new Error(error ?? "The local server can't be reached.");
+  }).catch(() => undefined);
+  if (!response?.ok || !response.body) {
+    const failure = (await response?.json().catch(() => undefined)) as Partial<ApiError> | undefined;
+    throw new Error(failure?.error ?? currentMessages().common.serverUnreachable);
   }
 
   const reader = response.body.pipeThrough(new TextDecoderStream()).getReader();
@@ -119,5 +126,10 @@ async function playTurn(path: string, body: unknown, onEvent: (event: TurnEvent)
       onEvent(event);
     }
   }
-  if (!finished) throw new Error("The connection to the local server was interrupted.");
+  if (!finished) throw new Error(currentMessages().common.connectionInterrupted);
+}
+
+/** Asks the server to word its messages in the interface language. */
+function languageHeader(): Record<string, string> {
+  return { "Accept-Language": currentLanguage() };
 }

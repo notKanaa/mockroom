@@ -7,7 +7,9 @@ import type { Env } from "./ai/provider.js";
 import { ProviderError } from "./ai/provider-errors.js";
 import type { ApiError, InterviewSummary, OllamaModels, PackSummary, TurnEvent } from "./api-types.js";
 import { InterviewHistory } from "./history/store.js";
+import { isLanguage, languageFromHeader, localizedMessage, type Language } from "./i18n.js";
 import { InterviewEngine, InterviewError, type InterviewErrorCode, type InterviewTurn } from "./interview/engine.js";
+import { say } from "./messages.js";
 import { filterPacks } from "./packs/library.js";
 import type { Pack } from "./packs/pack.js";
 import { AISettings, SettingsError, type Connect } from "./settings/ai-settings.js";
@@ -75,7 +77,7 @@ export function createApp({
       );
       return c.json({ ok: true, reply });
     } catch (error) {
-      return c.json({ ok: false, error: errorMessage(error) }, 502);
+      return c.json({ ok: false, error: localizedMessage(error, uiLanguage(c)) }, 502);
     }
   });
 
@@ -84,13 +86,13 @@ export function createApp({
 
   app.put("/api/settings", async (c) => c.json(await settings.save(await readJsonBody(c))));
 
-  app.post("/api/settings/test", async (c) => c.json(await settings.test(await readJsonBody(c))));
+  app.post("/api/settings/test", async (c) => c.json(await settings.test(await readJsonBody(c), uiLanguage(c))));
 
   app.get("/api/settings/ollama-models", async (c) => {
     try {
       return c.json<OllamaModels>({ models: await settings.ollamaModels(c.req.query("url")) });
     } catch (error) {
-      if (error instanceof ProviderError) return c.json<ApiError>({ error: error.message }, 502);
+      if (error instanceof ProviderError) return c.json<ApiError>({ error: error.text(uiLanguage(c)) }, 502);
       throw error;
     }
   });
@@ -112,10 +114,13 @@ export function createApp({
   });
 
   app.post("/api/interviews", async (c) => {
-    const { packId } = await readJsonBody(c);
+    const { packId, language } = await readJsonBody(c);
     const pack = packs.find((candidate) => candidate.id === packId);
-    if (!pack) return c.json<ApiError>({ error: "This pack doesn't exist." }, 404);
-    return streamTurn(c, engine.start(pack));
+    if (!pack) return c.json<ApiError>({ error: say("packNotFound")(uiLanguage(c)) }, 404);
+    if (language !== undefined && !isLanguage(language)) {
+      return c.json<ApiError>({ error: say("invalidLanguage")(uiLanguage(c)) }, 400);
+    }
+    return streamTurn(c, engine.start(pack, language));
   });
 
   app.get("/api/interviews/:id", (c) => c.json(engine.get(c.req.param("id"))));
@@ -123,7 +128,7 @@ export function createApp({
   app.post("/api/interviews/:id/answers", async (c) => {
     const { answer } = await readJsonBody(c);
     if (typeof answer !== "string") {
-      return c.json<ApiError>({ error: 'Send the answer as {"answer": "..."}.' }, 400);
+      return c.json<ApiError>({ error: say("answerShape")(uiLanguage(c)) }, 400);
     }
     return streamTurn(c, engine.answer(c.req.param("id"), answer));
   });
@@ -141,24 +146,26 @@ export function createApp({
     try {
       interview = await history.read(c.req.param("id"));
     } catch (error) {
-      return c.json<ApiError>({ error: errorMessage(error) }, 500);
+      return c.json<ApiError>({ error: localizedMessage(error, uiLanguage(c)) }, 500);
     }
-    if (!interview) return c.json<ApiError>({ error: notInHistory }, 404);
+    if (!interview) return c.json<ApiError>({ error: say("notInHistory")(uiLanguage(c)) }, 404);
     return c.json(interview);
   });
 
   app.delete("/api/history/:id", async (c) => {
-    if (!(await history.delete(c.req.param("id")))) return c.json<ApiError>({ error: notInHistory }, 404);
+    if (!(await history.delete(c.req.param("id")))) {
+      return c.json<ApiError>({ error: say("notInHistory")(uiLanguage(c)) }, 404);
+    }
     return c.body(null, 204);
   });
 
   app.onError((error, c) => {
     if (error instanceof InterviewError) {
-      return c.json<ApiError>({ error: error.message }, statusByErrorCode[error.code]);
+      return c.json<ApiError>({ error: error.text(uiLanguage(c)) }, statusByErrorCode[error.code]);
     }
-    if (error instanceof SettingsError) return c.json<ApiError>({ error: error.message }, 400);
+    if (error instanceof SettingsError) return c.json<ApiError>({ error: error.text(uiLanguage(c)) }, 400);
     console.error(error);
-    return c.json<ApiError>({ error: "Something went wrong on Mockroom's side." }, 500);
+    return c.json<ApiError>({ error: say("internalError")(uiLanguage(c)) }, 500);
   });
 
   if (uiDir) app.use("/*", serveStatic({ root: uiDir }));
@@ -166,10 +173,17 @@ export function createApp({
   return app;
 }
 
-const notInHistory = "This interview isn't in your history.";
+/**
+ * The language of the candidate's interface, for the messages the API sends
+ * back: the UI sends it as `Accept-Language`.
+ */
+function uiLanguage(c: Context): Language {
+  return languageFromHeader(c.req.header("Accept-Language"));
+}
 
 /** Streams an interviewer turn as newline-delimited JSON events. */
 function streamTurn(c: Context, turn: InterviewTurn): Response {
+  const language = uiLanguage(c);
   c.header("Content-Type", "application/x-ndjson; charset=utf-8");
   c.header("Cache-Control", "no-cache");
   return stream(c, async (out) => {
@@ -184,7 +198,7 @@ function streamTurn(c: Context, turn: InterviewTurn): Response {
       }
       if (interview) await send({ type: "done", interview });
     } catch (error) {
-      await send({ type: "error", message: errorMessage(error) });
+      await send({ type: "error", message: localizedMessage(error, language) });
     }
   });
 }
@@ -194,6 +208,3 @@ async function readJsonBody(c: Context): Promise<Record<string, unknown>> {
   return typeof body === "object" && body !== null ? (body as Record<string, unknown>) : {};
 }
 
-function errorMessage(error: unknown): string {
-  return error instanceof Error ? error.message : String(error);
-}

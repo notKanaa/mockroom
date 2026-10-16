@@ -143,3 +143,5 @@ npm test
 ```
 
 Tests go through the HTTP API with a fake AI model (`test/support/scripted-model.ts`), so they are fast and need no API key.
+
+The interface is in English and French. Every text the candidate sees lives in a dictionary, never in a component: `src/ui/messages.ts` for the UI, `src/server/messages.ts` for the messages the server sends back (errors, connection tests). Add a text in both languages; a test checks that both dictionaries have the same keys.

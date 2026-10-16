@@ -15,6 +15,8 @@ export type { HistoryEntry, SavedInterview, SavedPack } from "./history/types.js
 
 export type { PackLanguage, PackLevel } from "./packs/pack.js";
 
+export type { Language } from "./i18n.js";
+
 export type {
   AISettingsInput,
   AISettingsView,

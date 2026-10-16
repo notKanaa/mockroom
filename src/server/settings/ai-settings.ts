@@ -20,6 +20,8 @@ import {
   type ProviderName,
 } from "../ai/provider.js";
 import { keyPages, missingKeyMessage, ProviderError, withClearErrors } from "../ai/provider-errors.js";
+import { LocalizedError, localizedMessage, type Language } from "../i18n.js";
+import { say } from "../messages.js";
 import type {
   AISettingsInput,
   AISettingsView,
@@ -33,7 +35,7 @@ import type {
 export type Connect = (connection: ProviderConnection, options: ConnectOptions) => AIModel;
 
 /** The settings sent by the candidate don't make sense. The message says what to fix. */
-export class SettingsError extends Error {}
+export class SettingsError extends LocalizedError {}
 
 /** The settings file, `settings.json` in the Mockroom data folder. */
 interface SettingsFile {
@@ -72,8 +74,6 @@ const providerInfos: ProviderInfo[] = providers.map((id) =>
       },
 );
 
-const notConfigured =
-  "No AI provider is set up yet. Open Settings in Mockroom to choose one, then try again.";
 
 /** The connection to use, and where its provider choice comes from. */
 type ActiveConnection = ProviderConnection & { source: SettingSource };
@@ -142,7 +142,7 @@ export class AISettings {
         !apiKeys[input.provider] &&
         !apiKeyFromEnv(input.provider, this.#env)
       ) {
-        throw new SettingsError(`Enter your ${providerLabels[input.provider]} API key.`);
+        throw new SettingsError(say("enterKey", providerLabels[input.provider]));
       }
       const next: SettingsFile = {
         formatVersion: 1,
@@ -162,14 +162,14 @@ export class AISettings {
   /**
    * Sends a tiny message to a provider and says whether it answered. Without a
    * body, tests the provider in use; with one, tests those settings before
-   * they are saved (an empty key means the saved one).
+   * they are saved (an empty key means the saved one). Messages are in `language`.
    */
-  async test(body: unknown): Promise<ConnectionTest> {
+  async test(body: unknown, language: Language = "en"): Promise<ConnectionTest> {
     const saved = await this.#read();
     let connection: ProviderConnection | undefined;
     if (isEmptyBody(body)) {
       connection = this.#active(saved);
-      if (!connection) return { ok: false, error: notConfigured };
+      if (!connection) return { ok: false, error: say("notConfigured")(language) };
     } else {
       const input = parseInput(body);
       connection = {
@@ -182,7 +182,7 @@ export class AISettings {
     }
 
     const { provider, model } = connection;
-    if (provider !== "ollama" && !connection.apiKey) return { ok: false, error: missingKeyMessage(provider) };
+    if (provider !== "ollama" && !connection.apiKey) return { ok: false, error: missingKeyMessage(provider)(language) };
     // No retries: the candidate is waiting, and one failure says enough.
     const tested = withClearErrors(this.#connect(connection, { maxRetries: 0 }), connection);
     try {
@@ -190,11 +190,11 @@ export class AISettings {
         tested.streamText([{ role: "user", content: "Reply with the single word OK." }]),
       );
       if (reply.trim() === "") {
-        return { ok: false, error: `${providerLabels[provider]} answered with an empty message. Try another model.` };
+        return { ok: false, error: say("emptyTestReply", providerLabels[provider])(language) };
       }
-      return { ok: true, message: `Connected: ${providerLabels[provider]} (${model}) answered.` };
+      return { ok: true, message: say("connected", providerLabels[provider], model)(language) };
     } catch (error) {
-      return { ok: false, error: error instanceof Error ? error.message : String(error) };
+      return { ok: false, error: localizedMessage(error, language) };
     }
   }
 
@@ -205,13 +205,11 @@ export class AISettings {
     try {
       response = await fetch(`${base}/api/tags`, { signal: AbortSignal.timeout(5000) });
     } catch {
-      throw new ProviderError(
-        `Mockroom can't reach Ollama at ${base}. Is the Ollama app running? Start it, or check the Ollama address, then try again.`,
-      );
+      throw new ProviderError(say("ollamaListUnreachable", base));
     }
     const body = (await response.json().catch(() => undefined)) as { models?: { name?: unknown }[] } | undefined;
     if (!response.ok || !Array.isArray(body?.models)) {
-      throw new ProviderError(`The server at ${base} doesn't answer like Ollama. Check the Ollama address.`);
+      throw new ProviderError(say("notOllama", base));
     }
     // Ollama names the default version of a model "name:latest", which "name" also means.
     const names = body.models.flatMap(({ name }) =>
@@ -222,7 +220,7 @@ export class AISettings {
 
   async *#streamText(messages: ChatMessage[]): AsyncIterable<string> {
     const connection = this.#active(await this.#read());
-    if (!connection) throw new ProviderError(notConfigured);
+    if (!connection) throw new ProviderError(say("notConfigured"));
     if (connection.provider !== "ollama" && !connection.apiKey) {
       throw new ProviderError(missingKeyMessage(connection.provider));
     }
@@ -276,24 +274,22 @@ export function maskKey(key: string): string {
 function parseInput(body: unknown): AISettingsInput {
   const input = (typeof body === "object" && body !== null ? body : {}) as Record<string, unknown>;
   if (!isProviderName(input.provider)) {
-    throw new SettingsError(`Choose an AI provider: ${providers.map((name) => providerLabels[name]).join(", ")}.`);
+    throw new SettingsError(say("chooseProvider", providers.map((name) => providerLabels[name]).join(", ")));
   }
   const provider = input.provider;
   const model = typeof input.model === "string" ? input.model.trim() : "";
   if (!model) {
-    throw new SettingsError(
-      provider === "ollama" ? 'Choose an Ollama model, such as "llama3.2".' : "Choose a model.",
-    );
+    throw new SettingsError(say(provider === "ollama" ? "chooseOllamaModel" : "chooseModel"));
   }
-  if (model.length > 200) throw new SettingsError("That model name is too long.");
+  if (model.length > 200) throw new SettingsError(say("modelTooLong"));
   if (input.apiKey !== undefined && typeof input.apiKey !== "string") {
-    throw new SettingsError("The API key must be text.");
+    throw new SettingsError(say("keyNotText"));
   }
   if (input.ollamaUrl !== undefined && typeof input.ollamaUrl !== "string") {
-    throw new SettingsError("The Ollama address must be text.");
+    throw new SettingsError(say("ollamaUrlNotText"));
   }
   const apiKey = input.apiKey?.trim() || undefined;
-  if (apiKey && /\s/.test(apiKey)) throw new SettingsError("The API key can't contain spaces. Paste it again.");
+  if (apiKey && /\s/.test(apiKey)) throw new SettingsError(say("keyWithSpaces"));
   const ollamaUrl = input.ollamaUrl?.trim() ? checkOllamaUrl(input.ollamaUrl) : undefined;
   return { provider, model, apiKey, ollamaUrl };
 }
@@ -307,7 +303,7 @@ function checkOllamaUrl(url: string): string {
     protocol = undefined;
   }
   if (protocol !== "http:" && protocol !== "https:") {
-    throw new SettingsError(`The Ollama address must start with http:// or https://, like ${defaultOllamaUrl}.`);
+    throw new SettingsError(say("ollamaUrlProtocol", defaultOllamaUrl));
   }
   return normalized;
 }

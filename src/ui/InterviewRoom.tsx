@@ -1,4 +1,5 @@
 import { useEffect, useRef, type FormEvent, type KeyboardEvent } from "react";
+import { useI18n } from "./i18n";
 import { Message } from "./Message";
 import type { useInterview } from "./useInterview";
 
@@ -10,6 +11,7 @@ interface InterviewRoomProps {
 
 export function InterviewRoom({ session, onOpenSettings }: InterviewRoomProps) {
   const { interview, messages, streaming, error, ending, endError, debrief, draft, setDraft } = session;
+  const { t } = useI18n();
   const chatRef = useRef<HTMLOListElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const finished = interview?.status === "finished";
@@ -42,37 +44,36 @@ export function InterviewRoom({ session, onOpenSettings }: InterviewRoomProps) {
   }
 
   function confirmEnd() {
-    const confirmed = window.confirm(
-      "End the interview now? You'll get a debrief of the questions you have answered so far.",
-    );
-    if (confirmed) void session.end();
+    if (window.confirm(t.room.confirmEnd)) void session.end();
   }
 
   const { questionNumber, followUpNumber, totalQuestions } = interview;
   const progress = finished
-    ? "Interview complete"
-    : `Question ${questionNumber} of ${totalQuestions}${followUpNumber > 0 ? ` · Follow-up ${followUpNumber}` : ""}`;
+    ? t.room.complete
+    : `${t.room.progress(questionNumber, totalQuestions)}${followUpNumber > 0 ? ` · ${t.room.followUpProgress(followUpNumber)}` : ""}`;
 
   return (
     <main className="room">
       <header className="room-header">
         <div className="room-heading">
           <div>
-            <p className="room-pack">{interview.pack.title}</p>
+            <p className="room-pack">
+              {interview.pack.title} · {t.languageNames[interview.language]}
+            </p>
             <p className="room-progress" aria-live="polite">
               {progress}
             </p>
           </div>
           {!finished && (
             <button type="button" className="secondary-button" onClick={confirmEnd} disabled={streaming || ending}>
-              {ending ? "Ending…" : "End interview"}
+              {ending ? t.room.ending : t.room.end}
             </button>
           )}
         </div>
         <div
           className="progress"
           role="progressbar"
-          aria-label="Interview progress"
+          aria-label={t.room.progressLabel}
           aria-valuemin={0}
           aria-valuemax={totalQuestions}
           aria-valuenow={finished ? totalQuestions : questionNumber}
@@ -84,7 +85,7 @@ export function InterviewRoom({ session, onOpenSettings }: InterviewRoomProps) {
         </div>
       </header>
 
-      <ol ref={chatRef} className="chat" aria-label="Conversation">
+      <ol ref={chatRef} className="chat" aria-label={t.room.conversation}>
         {messages.map((message, index) => {
           const isTyping = streaming && index === messages.length - 1 && message.role === "interviewer";
           return <Message key={index} message={message} typing={isTyping} />;
@@ -93,15 +94,15 @@ export function InterviewRoom({ session, onOpenSettings }: InterviewRoomProps) {
 
       {error && (
         <p className="room-error" role="alert">
-          {error} Your answer was not sent; you can send it again.{" "}
+          {error} {t.room.notSent}{" "}
           <button type="button" className="link-button" onClick={onOpenSettings}>
-            Open settings
+            {t.common.openSettings}
           </button>
         </p>
       )}
       {endError && (
         <p className="room-error" role="alert">
-          {endError} The interview is still going; you can try to end it again.
+          {endError} {t.room.stillGoing}
         </p>
       )}
 
@@ -114,18 +115,18 @@ export function InterviewRoom({ session, onOpenSettings }: InterviewRoomProps) {
               </p>
               <div className="room-done-actions">
                 <button type="button" className="secondary-button" onClick={session.reset}>
-                  Back to packs
+                  {t.common.backToPacks}
                 </button>
                 <button type="button" className="secondary-button" onClick={onOpenSettings}>
-                  Settings
+                  {t.common.settings}
                 </button>
                 <button type="button" onClick={session.retryDebrief}>
-                  Try again
+                  {t.room.tryAgain}
                 </button>
               </div>
             </>
           ) : (
-            <p className="typing">Writing your debrief, question by question… This can take a minute.</p>
+            <p className="typing">{t.room.writingDebrief}</p>
           )}
         </footer>
       ) : (
@@ -135,15 +136,15 @@ export function InterviewRoom({ session, onOpenSettings }: InterviewRoomProps) {
             value={draft}
             onChange={(event) => setDraft(event.target.value)}
             onKeyDown={onKeyDown}
-            placeholder={streaming ? "The interviewer is writing…" : "Type your answer…"}
-            aria-label="Your answer"
+            placeholder={streaming ? t.room.interviewerWriting : t.room.typeAnswer}
+            aria-label={t.room.yourAnswer}
             rows={3}
             disabled={streaming}
           />
           <div className="composer-actions">
-            <span className="composer-hint">Enter to send · Shift+Enter for a new line</span>
+            <span className="composer-hint">{t.room.composerHint}</span>
             <button type="submit" disabled={streaming || draft.trim() === ""}>
-              Send
+              {t.room.send}
             </button>
           </div>
         </form>

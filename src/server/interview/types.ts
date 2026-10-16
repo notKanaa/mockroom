@@ -1,4 +1,5 @@
 // Public shapes of an interview. Pure types: the UI imports them too.
+import type { Language } from "../i18n.js";
 
 /** setup → asking (question 1 … N, each with optional follow-ups) → finished */
 export type InterviewStatus = "setup" | "asking" | "finished";
@@ -6,6 +7,8 @@ export type InterviewStatus = "setup" | "asking" | "finished";
 export interface InterviewSummary {
   id: string;
   pack: { id: string; title: string };
+  /** The language the interview is held in, chosen by the candidate. It can differ from the pack's. */
+  language: Language;
   status: InterviewStatus;
   /** The question being asked, from 1. 0 during setup; the last question's number once finished. */
   questionNumber: number;
