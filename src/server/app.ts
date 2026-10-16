@@ -3,14 +3,28 @@ import { Hono, type Context } from "hono";
 import type { ContentfulStatusCode } from "hono/utils/http-status";
 import { stream } from "hono/streaming";
 import { collectText, type AIModel } from "./ai/model.js";
-import type { ApiError, InterviewSummary, PackSummary, TurnEvent } from "./api-types.js";
+import type { Env } from "./ai/provider.js";
+import { ProviderError } from "./ai/provider-errors.js";
+import type { ApiError, InterviewSummary, OllamaModels, PackSummary, TurnEvent } from "./api-types.js";
 import { InterviewHistory } from "./history/store.js";
 import { InterviewEngine, InterviewError, type InterviewErrorCode, type InterviewTurn } from "./interview/engine.js";
 import { filterPacks } from "./packs/library.js";
 import type { Pack } from "./packs/pack.js";
+import { AISettings, SettingsError, type Connect } from "./settings/ai-settings.js";
 
 export interface AppOptions {
-  model: AIModel;
+  /**
+   * A fixed AI model for interviews, used instead of the one chosen in the
+   * settings. Tests pass a fake here.
+   */
+  model?: AIModel;
+  /**
+   * Environment variables, which override the AI provider settings (see
+   * `provider.ts`). None by default, so tests don't depend on the machine.
+   */
+  env?: Env;
+  /** Builds the model for a provider. Defaults to the real providers; tests inject fakes. */
+  connect?: Connect;
   /** Packs the candidate can pick from (see `loadPacks`). */
   packs: readonly Pack[];
   /** Folder holding the built UI. Omitted in dev mode, where Vite serves the UI. */
@@ -18,7 +32,7 @@ export interface AppOptions {
   /** The most follow-up questions the interviewer asks on one main question. Defaults to 2; 0 turns them off. */
   followUpsPerQuestion?: number;
   /**
-   * The Mockroom data folder, where finished interviews are saved (see
+   * The Mockroom data folder, where finished interviews and settings are saved (see
    * `mockroomDataDir`). Required, so tests always pick their own folder.
    */
   dataDir: string;
@@ -35,9 +49,20 @@ const statusByErrorCode: Record<InterviewErrorCode, ContentfulStatusCode> = {
   "debrief-failed": 502,
 };
 
-export function createApp({ model, packs, uiDir, followUpsPerQuestion, dataDir, now }: AppOptions): Hono {
+export function createApp({
+  model: fixedModel,
+  env,
+  connect,
+  packs,
+  uiDir,
+  followUpsPerQuestion,
+  dataDir,
+  now,
+}: AppOptions): Hono {
   const app = new Hono();
   const history = new InterviewHistory(dataDir);
+  const settings = new AISettings({ dataDir, env, connect });
+  const model = fixedModel ?? settings.model;
   const engine = new InterviewEngine(model, { followUpsPerQuestion, history, now });
 
   app.get("/api/health", (c) => c.json({ name: "Mockroom", status: "ok" }));
@@ -51,6 +76,22 @@ export function createApp({ model, packs, uiDir, followUpsPerQuestion, dataDir, 
       return c.json({ ok: true, reply });
     } catch (error) {
       return c.json({ ok: false, error: errorMessage(error) }, 502);
+    }
+  });
+
+  // AI provider settings. API keys only ever come back masked.
+  app.get("/api/settings", async (c) => c.json(await settings.view()));
+
+  app.put("/api/settings", async (c) => c.json(await settings.save(await readJsonBody(c))));
+
+  app.post("/api/settings/test", async (c) => c.json(await settings.test(await readJsonBody(c))));
+
+  app.get("/api/settings/ollama-models", async (c) => {
+    try {
+      return c.json<OllamaModels>({ models: await settings.ollamaModels(c.req.query("url")) });
+    } catch (error) {
+      if (error instanceof ProviderError) return c.json<ApiError>({ error: error.message }, 502);
+      throw error;
     }
   });
 
@@ -115,6 +156,7 @@ export function createApp({ model, packs, uiDir, followUpsPerQuestion, dataDir, 
     if (error instanceof InterviewError) {
       return c.json<ApiError>({ error: error.message }, statusByErrorCode[error.code]);
     }
+    if (error instanceof SettingsError) return c.json<ApiError>({ error: error.message }, 400);
     console.error(error);
     return c.json<ApiError>({ error: "Something went wrong on Mockroom's side." }, 500);
   });

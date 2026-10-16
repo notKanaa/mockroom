@@ -15,6 +15,19 @@ export type { HistoryEntry, SavedInterview, SavedPack } from "./history/types.js
 
 export type { PackLanguage, PackLevel } from "./packs/pack.js";
 
+export type {
+  AISettingsInput,
+  AISettingsView,
+  ConnectionTest,
+  KeyedProviderName,
+  MaskedKey,
+  OllamaModels,
+  ProviderChoice,
+  ProviderInfo,
+  ProviderName,
+  SettingSource,
+} from "./settings/types.js";
+
 /** A pack as listed by `GET /api/packs`, which takes optional `technology`, `level` and `language` filters. */
 export interface PackSummary {
   id: string;

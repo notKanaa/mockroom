@@ -25,6 +25,8 @@ export function useInterview() {
   const [ending, setEnding] = useState(false);
   const [endError, setEndError] = useState<string | null>(null);
   const [debrief, setDebrief] = useState<DebriefState>(noDebrief);
+  // The answer being typed, kept here so it survives a trip to the settings.
+  const [draft, setDraft] = useState("");
 
   /**
    * Plays one interviewer turn, shown after `messages`, and returns where the interview stands.
@@ -82,6 +84,8 @@ export function useInterview() {
     ending,
     endError,
     debrief,
+    draft,
+    setDraft,
     start: (packId: string) => playTurn(empty, [], (onEvent) => startInterview(packId, onEvent)),
     answer: async (text: string) => {
       const { interview } = state;
@@ -116,6 +120,7 @@ export function useInterview() {
       setError(null);
       setEndError(null);
       setDebrief(noDebrief);
+      setDraft("");
     },
   };
 }

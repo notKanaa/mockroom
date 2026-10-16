@@ -1,8 +1,12 @@
 import type {
+  AISettingsInput,
+  AISettingsView,
   ApiError,
+  ConnectionTest,
   Debrief,
   HistoryEntry,
   InterviewSummary,
+  OllamaModels,
   PackSummary,
   SavedInterview,
   TurnEvent,
@@ -47,18 +51,43 @@ export async function deleteSavedInterview(interviewId: string): Promise<void> {
   await requestJson("DELETE", `/api/history/${interviewId}`);
 }
 
+/** The AI provider settings. API keys come back masked. */
+export function fetchSettings(): Promise<AISettingsView> {
+  return requestJson("GET", "/api/settings");
+}
+
+/** Saves the AI provider settings. They apply to the next AI call. */
+export function saveSettings(input: AISettingsInput): Promise<AISettingsView> {
+  return requestJson("PUT", "/api/settings", input);
+}
+
+/** Checks that a provider answers, with these settings or, without any, the ones in use. */
+export function testConnection(input?: AISettingsInput): Promise<ConnectionTest> {
+  return requestJson("POST", "/api/settings/test", input);
+}
+
+/** The models installed in the Ollama running at `url`. */
+export async function listOllamaModels(url: string): Promise<string[]> {
+  const { models } = await requestJson<OllamaModels>("GET", `/api/settings/ollama-models?url=${encodeURIComponent(url)}`);
+  return models;
+}
+
 function postJson<T>(path: string): Promise<T> {
   return requestJson("POST", path);
 }
 
-async function requestJson<T>(method: string, path: string): Promise<T> {
-  const response = await fetch(path, { method }).catch(() => undefined);
+async function requestJson<T>(method: string, path: string, body?: unknown): Promise<T> {
+  const init: RequestInit =
+    body === undefined
+      ? { method }
+      : { method, headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) };
+  const response = await fetch(path, init).catch(() => undefined);
   if (response?.status === 204) return undefined as T;
-  const body = (await response?.json().catch(() => undefined)) as T | Partial<ApiError> | undefined;
+  const result = (await response?.json().catch(() => undefined)) as T | Partial<ApiError> | undefined;
   if (!response?.ok) {
-    throw new Error((body as Partial<ApiError> | undefined)?.error ?? "The local server can't be reached.");
+    throw new Error((result as Partial<ApiError> | undefined)?.error ?? "The local server can't be reached.");
   }
-  return body as T;
+  return result as T;
 }
 
 /** Sends a request that triggers an interviewer turn, and reports its events as they stream in. */

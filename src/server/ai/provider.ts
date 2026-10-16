@@ -4,11 +4,10 @@ import { createOpenAI } from "@ai-sdk/openai";
 import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
 import { streamText, type LanguageModel, type ModelMessage } from "ai";
 import type { AIModel, ChatMessage } from "./model.js";
-import { unconfiguredModel } from "./unconfigured-model.js";
 
 /**
- * Picks the real AI provider from environment variables, until the settings
- * screen exists (issue #4):
+ * The AI providers Mockroom can use. They are chosen on the settings screen,
+ * or with environment variables, which override the settings:
  *
  * - MOCKROOM_PROVIDER: openai, anthropic, gemini or ollama
  * - MOCKROOM_MODEL: the model to use (optional, except for Ollama)
@@ -19,20 +18,41 @@ import { unconfiguredModel } from "./unconfigured-model.js";
 export const providers = ["openai", "anthropic", "gemini", "ollama"] as const;
 export type ProviderName = (typeof providers)[number];
 
-export interface ProviderConfig {
-  provider: ProviderName;
-  model: string;
-}
+/** The providers that need an API key: all but Ollama. */
+export type KeyedProviderName = Exclude<ProviderName, "ollama">;
+export const keyedProviders = ["openai", "anthropic", "gemini"] as const satisfies readonly KeyedProviderName[];
 
-const defaultModels: Record<Exclude<ProviderName, "ollama">, string> = {
+export const providerLabels: Record<ProviderName, string> = {
+  openai: "OpenAI",
+  anthropic: "Anthropic",
+  gemini: "Gemini",
+  ollama: "Ollama",
+};
+
+export const defaultModels: Record<KeyedProviderName, string> = {
   openai: "gpt-5.4-mini",
   anthropic: "claude-haiku-5-5",
   gemini: "gemini-flash-latest",
 };
 
-type Env = Record<string, string | undefined>;
+export const defaultOllamaUrl = "http://127.0.0.1:11434";
 
-/** Reads the provider settings. Undefined when none is set; throws when they are wrong. */
+export interface ProviderConfig {
+  provider: ProviderName;
+  model: string;
+}
+
+/** Everything needed to call a provider: what to use, and how to reach it. */
+export interface ProviderConnection extends ProviderConfig {
+  /** The API key. Unused by Ollama. */
+  apiKey?: string;
+  /** Where Ollama runs, without a trailing slash. Unused by the other providers. */
+  ollamaUrl: string;
+}
+
+export type Env = Record<string, string | undefined>;
+
+/** Reads the provider choice from the environment. Undefined when none is set; throws when it is wrong. */
 export function providerConfigFromEnv(env: Env): ProviderConfig | undefined {
   const provider = env.MOCKROOM_PROVIDER?.trim().toLowerCase();
   if (!provider) return undefined;
@@ -48,32 +68,53 @@ export function providerConfigFromEnv(env: Env): ProviderConfig | undefined {
   return { provider, model };
 }
 
-/** The AI model chosen in the environment, or a placeholder explaining how to choose one. */
-export function modelFromEnv(env: Env): { model: AIModel; config?: ProviderConfig } {
-  const config = providerConfigFromEnv(env);
-  if (!config) return { model: unconfiguredModel };
-  return { model: aiSdkModel(languageModel(config, env)), config };
+/** The provider's API key set in the environment, if any. */
+export function apiKeyFromEnv(provider: KeyedProviderName, env: Env): string | undefined {
+  const key =
+    provider === "openai"
+      ? env.OPENAI_API_KEY
+      : provider === "anthropic"
+        ? env.ANTHROPIC_API_KEY
+        : (env.GEMINI_API_KEY ?? env.GOOGLE_GENERATIVE_AI_API_KEY);
+  return key?.trim() || undefined;
 }
 
-function languageModel({ provider, model }: ProviderConfig, env: Env): LanguageModel {
+/** The Ollama address set in the environment, if any. */
+export function ollamaUrlFromEnv(env: Env): string | undefined {
+  return env.MOCKROOM_OLLAMA_URL?.trim() ? normalizeUrl(env.MOCKROOM_OLLAMA_URL) : undefined;
+}
+
+/** An address without surrounding spaces or trailing slashes. */
+export function normalizeUrl(url: string): string {
+  return url.trim().replace(/\/+$/, "");
+}
+
+export interface ConnectOptions {
+  /** How many times a failed call is retried. Defaults to the AI SDK's 2. */
+  maxRetries?: number;
+}
+
+/** A real provider, through the Vercel AI SDK. */
+export function connectProvider(connection: ProviderConnection, { maxRetries }: ConnectOptions = {}): AIModel {
+  return aiSdkModel(languageModel(connection), maxRetries);
+}
+
+function languageModel({ provider, model, apiKey, ollamaUrl }: ProviderConnection): LanguageModel {
+  // An empty key, rather than none, so the SDK never falls back to a key of its own.
   switch (provider) {
     case "openai":
-      return createOpenAI({ apiKey: env.OPENAI_API_KEY })(model);
+      return createOpenAI({ apiKey: apiKey ?? "" })(model);
     case "anthropic":
-      return createAnthropic({ apiKey: env.ANTHROPIC_API_KEY })(model);
+      return createAnthropic({ apiKey: apiKey ?? "" })(model);
     case "gemini":
-      return createGoogleGenerativeAI({
-        apiKey: env.GEMINI_API_KEY ?? env.GOOGLE_GENERATIVE_AI_API_KEY,
-      })(model);
-    case "ollama": {
-      const baseURL = (env.MOCKROOM_OLLAMA_URL ?? "http://127.0.0.1:11434").replace(/\/+$/, "");
-      return createOpenAICompatible({ name: "ollama", baseURL: `${baseURL}/v1` })(model);
-    }
+      return createGoogleGenerativeAI({ apiKey: apiKey ?? "" })(model);
+    case "ollama":
+      return createOpenAICompatible({ name: "ollama", baseURL: `${normalizeUrl(ollamaUrl)}/v1` })(model);
   }
 }
 
 /** Adapts a Vercel AI SDK model to Mockroom's AI model port. */
-function aiSdkModel(model: LanguageModel): AIModel {
+function aiSdkModel(model: LanguageModel, maxRetries: number | undefined): AIModel {
   return {
     async *streamText(messages: ChatMessage[]) {
       const system = messages
@@ -87,6 +128,7 @@ function aiSdkModel(model: LanguageModel): AIModel {
         model,
         system: system || undefined,
         messages: conversation,
+        maxRetries,
         // Errors are rethrown below, so the caller can report them.
         onError: () => {},
       });
@@ -100,6 +142,6 @@ function aiSdkModel(model: LanguageModel): AIModel {
   };
 }
 
-function isProviderName(value: string): value is ProviderName {
-  return (providers as readonly string[]).includes(value);
+export function isProviderName(value: unknown): value is ProviderName {
+  return typeof value === "string" && (providers as readonly string[]).includes(value);
 }
