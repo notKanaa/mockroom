@@ -336,6 +336,69 @@ input[type="radio"] {
   box-shadow: var(--shadow-sm);
 }
 
+.ui-spinner {
+  flex: none;
+  width: 14px;
+  height: 14px;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: var(--r-full);
+  animation: spin 0.7s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* A shimmering label, like an AI chat's "Thinking…". */
+.ui-thinking {
+  display: inline-flex;
+  align-items: baseline;
+  gap: var(--s2);
+  font-size: var(--fs-sm);
+}
+
+.ui-thinking-label {
+  background: linear-gradient(
+      90deg,
+      var(--muted) 0%,
+      var(--muted) 40%,
+      var(--text) 50%,
+      var(--muted) 60%,
+      var(--muted) 100%
+    )
+    0 0 / 250% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: shimmer 2.2s linear infinite;
+}
+
+@keyframes shimmer {
+  from {
+    background-position: 100% 0;
+  }
+  to {
+    background-position: 0% 0;
+  }
+}
+
+.ui-thinking-time {
+  color: var(--muted);
+  font-size: var(--fs-xs);
+  font-variant-numeric: tabular-nums;
+}
+
+.ui-loading {
+  cursor: progress;
+}
+
+.ui-button.ui-loading:disabled {
+  opacity: 0.8;
+}
+
 .ui-banner {
   padding: var(--s3) var(--s4);
   border-radius: var(--r-md);
@@ -1034,6 +1097,13 @@ button.chip:disabled {
   opacity: 0.45;
 }
 
+/* The chip that is starting the interview stays bright, with its spinner. */
+button.chip[aria-busy="true"] {
+  border-color: var(--accent);
+  color: var(--accent-text);
+  opacity: 1;
+}
+
 .chip-quiet {
   border-color: transparent;
   background: transparent;
@@ -1428,6 +1498,14 @@ button.chip:disabled {
 .message {
   display: flex;
   gap: var(--s3);
+  animation: message-in 0.25s ease-out;
+}
+
+@keyframes message-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
 }
 
 .message-candidate {
@@ -1488,39 +1566,44 @@ button.chip:disabled {
   }
 }
 
-.typing-dots {
-  display: inline-flex;
+.message-waiting {
+  display: flex;
   align-items: center;
-  gap: var(--s1);
-  height: var(--s6);
+  min-height: var(--s6);
 }
 
-.dot {
-  width: 6px;
-  height: 6px;
+/* Placeholders in the shape of what is coming, gently pulsing. */
+.skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s3);
+  padding: var(--s5);
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+}
+
+.skeleton span {
+  height: 10px;
   border-radius: var(--r-full);
-  background: var(--muted);
-  animation: dot 1.2s ease-in-out infinite;
+  background: var(--raised);
+  animation: pulse 1.6s ease-in-out infinite;
 }
 
-.dot:nth-last-child(2) {
-  animation-delay: 0.15s;
+.skeleton span:nth-child(1) {
+  width: 35%;
 }
 
-.dot:last-child {
-  animation-delay: 0.3s;
+.skeleton span:nth-child(2) {
+  width: 90%;
 }
 
-@keyframes dot {
-  0%,
-  60%,
-  100% {
-    opacity: 0.3;
-    transform: translateY(0);
-  }
-  30% {
-    opacity: 1;
-    transform: translateY(-3px);
+.skeleton span:nth-child(3) {
+  width: 70%;
+}
+
+@keyframes pulse {
+  50% {
+    opacity: 0.45;
   }
 }
 
@@ -1538,9 +1621,6 @@ button.chip:disabled {
 .room-writing {
   display: flex;
   align-items: center;
-  gap: var(--s3);
-  color: var(--muted);
-  font-size: var(--fs-sm);
 }
 
 .composer-dock {

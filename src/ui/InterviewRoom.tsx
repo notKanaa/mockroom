@@ -1,7 +1,7 @@
 import { useEffect, useRef, type FormEvent, type KeyboardEvent } from "react";
 import { interviewTitle, useI18n } from "./i18n";
 import { ArrowUpIcon } from "./Icons";
-import { Banner, Button, IconButton } from "./kit";
+import { Banner, Button, IconButton, Thinking } from "./kit";
 import { Message } from "./Message";
 import { ModelPicker } from "./ModelPicker";
 import { RecruiterBadge, recruiterFor } from "./Recruiter";
@@ -124,14 +124,21 @@ export function InterviewRoom({ session, onOpenSettings }: InterviewRoomProps) {
                   </div>
                 </>
               ) : (
-                <p className="room-writing">
-                  <span className="typing-dots" aria-hidden="true">
-                    <span className="dot" />
-                    <span className="dot" />
-                    <span className="dot" />
-                  </span>
-                  {t.room.writingDebrief}
-                </p>
+                <>
+                  <p className="room-writing">
+                    <Thinking label={t.room.writingDebrief} />
+                  </p>
+                  {/* The shape of the debrief to come. */}
+                  <div className="skeleton" aria-hidden="true">
+                    <span />
+                    <span />
+                    <span />
+                  </div>
+                  <div className="skeleton" aria-hidden="true">
+                    <span />
+                    <span />
+                  </div>
+                </>
               )}
             </div>
           )}

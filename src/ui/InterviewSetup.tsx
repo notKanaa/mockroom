@@ -184,7 +184,7 @@ export function InterviewSetup({
           </p>
         </div>
         <LanguagePicker value={interviewLanguage} onChange={onLanguageChange} placement="up" />
-        <Button variant="primary" disabled={starting || nothingChosen} onClick={start}>
+        <Button variant="primary" loading={starting} disabled={nothingChosen} onClick={start}>
           {starting ? t.setup.starting : t.setup.start}
         </Button>
       </section>

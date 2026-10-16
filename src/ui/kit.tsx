@@ -22,19 +22,61 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   size?: "sm" | "md";
   /** An icon before the text. */
   icon?: ReactNode;
+  /** True while what the button started is under way: it shows a spinner and can't be pressed again. */
+  loading?: boolean;
 }
 
 /** A text button. Defaults to a secondary, medium button that doesn't submit forms. */
-export function Button({ variant = "secondary", size = "md", icon, className, children, ...rest }: ButtonProps) {
+export function Button({
+  variant = "secondary",
+  size = "md",
+  icon,
+  loading = false,
+  disabled,
+  className,
+  children,
+  ...rest
+}: ButtonProps) {
   return (
     <button
       type="button"
       {...rest}
-      className={`ui-button ui-button-${variant} ui-button-${size}${className ? ` ${className}` : ""}`}
+      disabled={disabled || loading}
+      aria-busy={loading || undefined}
+      className={`ui-button ui-button-${variant} ui-button-${size}${loading ? " ui-loading" : ""}${className ? ` ${className}` : ""}`}
     >
-      {icon}
+      {loading ? <Spinner /> : icon}
       {children}
     </button>
+  );
+}
+
+/** A small turning circle, for something under way. Decorative: say what is happening next to it. */
+export function Spinner() {
+  return <span className="ui-spinner" aria-hidden="true" />;
+}
+
+/**
+ * Something the AI is working on, like "Alex is thinking…": the label shimmers,
+ * and once it takes a while the seconds elapsed show, so a slow model doesn't
+ * look frozen. Assistive technologies hear the label once.
+ */
+export function Thinking({ label }: { label: string }) {
+  const [seconds, setSeconds] = useState(0);
+  useEffect(() => {
+    const startedAt = Date.now();
+    const timer = window.setInterval(() => setSeconds(Math.floor((Date.now() - startedAt) / 1000)), 1000);
+    return () => window.clearInterval(timer);
+  }, []);
+  return (
+    <span className="ui-thinking" role="status">
+      <span className="ui-thinking-label">{label}</span>
+      {seconds >= 3 && (
+        <span className="ui-thinking-time" aria-hidden="true">
+          {seconds} s
+        </span>
+      )}
+    </span>
   );
 }
 
@@ -192,6 +234,8 @@ interface DropdownProps<T extends string> {
   disabled?: boolean;
   /** Shown on hover, e.g. why the drop-down is disabled. */
   title?: string;
+  /** True while a choice is being applied: a spinner replaces the arrow. */
+  busy?: boolean;
 }
 
 /**
@@ -209,6 +253,7 @@ export function Dropdown<T extends string>({
   placement = "down",
   disabled = false,
   title,
+  busy = false,
 }: DropdownProps<T>) {
   const [open, setOpen] = useState(false);
   const [active, setActive] = useState(-1);
@@ -287,6 +332,7 @@ export function Dropdown<T extends string>({
         className="ui-dropdown-button"
         aria-haspopup="listbox"
         aria-expanded={open}
+        aria-busy={busy || undefined}
         aria-label={`${label}: ${chosen?.label ?? placeholder}`}
         title={title}
         disabled={disabled}
@@ -295,9 +341,13 @@ export function Dropdown<T extends string>({
       >
         {chosen?.icon}
         <span className="ui-dropdown-value">{chosen?.label ?? placeholder}</span>
-        <svg className="icon" viewBox="0 0 24 24" width="14" height="14" aria-hidden="true" focusable="false">
-          <path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-        </svg>
+        {busy ? (
+          <Spinner />
+        ) : (
+          <svg className="icon" viewBox="0 0 24 24" width="14" height="14" aria-hidden="true" focusable="false">
+            <path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+          </svg>
+        )}
       </button>
       {open && (
         <div className={`ui-dropdown-panel ui-dropdown-${placement}`}>

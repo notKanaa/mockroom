@@ -1,5 +1,6 @@
 import type { TranscriptEntry } from "../server/api-types";
 import { useI18n } from "./i18n";
+import { Thinking } from "./kit";
 import { Avatar, type Recruiter } from "./Recruiter";
 
 interface MessageProps {
@@ -27,11 +28,8 @@ export function Message({ message, recruiter, typing = false }: MessageProps) {
           {message.followUpNumber !== undefined && <span className="message-tag">{t.common.followUp}</span>}
         </p>
         {waiting ? (
-          <p className="typing-dots" role="status">
-            <span className="visually-hidden">{t.recruiter.thinking(recruiter.name)}</span>
-            <span className="dot" aria-hidden="true" />
-            <span className="dot" aria-hidden="true" />
-            <span className="dot" aria-hidden="true" />
+          <p className="message-waiting">
+            <Thinking label={t.recruiter.thinking(recruiter.name)} />
           </p>
         ) : (
           <p className={typing ? "message-text streaming" : "message-text"}>{message.content}</p>

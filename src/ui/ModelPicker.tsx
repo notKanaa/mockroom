@@ -26,6 +26,7 @@ export function ModelPicker({ onOpenSettings, placement = "down" }: ModelPickerP
   // The installed Ollama models, or null when Ollama can't be reached.
   const [ollamaModels, setOllamaModels] = useState<string[] | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     let current = true;
@@ -99,10 +100,13 @@ export function ModelPicker({ onOpenSettings, placement = "down" }: ModelPickerP
     const provider = value.slice(0, separator) as ProviderName;
     const model = value.slice(separator + 1);
     setError(null);
+    setSaving(true);
     try {
       setView(await saveSettings({ provider, model }));
     } catch (failure) {
       setError(failure instanceof Error ? failure.message : String(failure));
+    } finally {
+      setSaving(false);
     }
   }
 
@@ -116,7 +120,8 @@ export function ModelPicker({ onOpenSettings, placement = "down" }: ModelPickerP
         onChange={(value) => void choose(value)}
         footer={{ label: t.model.connect, onClick: onOpenSettings }}
         placement={placement}
-        disabled={fromEnvironment}
+        disabled={fromEnvironment || saving}
+        busy={saving}
         title={fromEnvironment ? t.model.fromEnvironment : undefined}
       />
       {error && (

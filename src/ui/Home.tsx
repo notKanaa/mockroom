@@ -4,7 +4,7 @@ import { detectJobOffer } from "./api";
 import { languages, useI18n } from "./i18n";
 import { ArrowUpIcon, PlusIcon } from "./Icons";
 import { InterviewSetup, type Detection } from "./InterviewSetup";
-import { Banner, Dropdown, IconButton } from "./kit";
+import { Banner, Dropdown, IconButton, Spinner, Thinking } from "./kit";
 import { ModelPicker } from "./ModelPicker";
 import { useAutoGrow } from "./useAutoGrow";
 
@@ -116,8 +116,8 @@ export function Home({ packs, loadError, starting, error, onStart, onOpenSetting
             <ModelPicker onOpenSettings={onOpenSettings} />
             <LanguagePicker value={interviewLanguage} onChange={setPickedLanguage} />
             {detecting && (
-              <span className="prompt-status" role="status">
-                {t.setup.detecting}
+              <span className="prompt-status">
+                <Thinking label={t.setup.detecting} />
               </span>
             )}
             <IconButton
@@ -169,6 +169,8 @@ interface PackChipsProps {
 /** One chip per technology and level, starting an interview on its pack in one click. */
 function PackChips({ packs, interviewLanguage, disabled, onPick, onCombine }: PackChipsProps) {
   const { t } = useI18n();
+  // The chip that was clicked, to show it is starting.
+  const [pickedId, setPickedId] = useState<string | null>(null);
   if (packs.length === 0) return <Banner tone="error">{t.picker.noPacks}</Banner>;
 
   // The same technology and level can exist in several languages: the chip uses the interview's if it can.
@@ -198,8 +200,13 @@ function PackChips({ packs, interviewLanguage, disabled, onPick, onCombine }: Pa
                 className="chip"
                 disabled={disabled}
                 aria-label={t.home.chipLabel(label)}
-                onClick={() => onPick(pack)}
+                aria-busy={disabled && pickedId === pack.id ? true : undefined}
+                onClick={() => {
+                  setPickedId(pack.id);
+                  onPick(pack);
+                }}
               >
+                {disabled && pickedId === pack.id && <Spinner />}
                 {label}
               </button>
             </li>
