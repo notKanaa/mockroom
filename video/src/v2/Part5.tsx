@@ -94,7 +94,7 @@ export function Part5Composition(props: FilmProps) {
   return (
     <FilmProvider value={props}>
       <Part5 />
-      <SoundTrack cues={part5Sound} gain={1.35} />
+      <SoundTrack cues={part5Sound} gain={1.2} />
     </FilmProvider>
   );
 }
