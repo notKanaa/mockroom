@@ -4,6 +4,8 @@ import { Composition, Folder } from "remotion";
 import { Promo, SceneOnly, type PromoProps } from "./compositions/Promo";
 import { LOOP_FRAMES, LOOP_SIZE, ReadmeLoop, type LoopProps } from "./compositions/ReadmeLoop";
 import { formats, type FilmProps } from "./lib/film";
+import { PART1_FRAMES } from "./v2/beats";
+import { Part1Composition } from "./v2/Part1";
 import { FPS, PROMO_FRAMES, scenes, type SceneId } from "./timeline";
 
 /** The frame's size follows the `aspect` prop, so one composition renders every shape. */
@@ -47,6 +49,18 @@ export function Root() {
           fps={FPS}
           {...formats["1:1"]}
           defaultProps={{ locale: "en", aspect: "1:1", voiceOver: false } satisfies PromoProps}
+          calculateMetadata={sizeFromAspect}
+        />
+      </Folder>
+
+      <Folder name="V2">
+        <Composition
+          id="V2-Part1"
+          component={Part1Composition}
+          durationInFrames={PART1_FRAMES}
+          fps={FPS}
+          {...formats["16:9"]}
+          defaultProps={{ locale: "en", aspect: "16:9" } satisfies FilmProps}
           calculateMetadata={sizeFromAspect}
         />
       </Folder>

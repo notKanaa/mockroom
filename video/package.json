@@ -15,11 +15,15 @@
     "render": "npm run render:promo && npm run render:loop && npm run render:gif",
     "stills": "node scripts/stills.mjs",
     "cues": "tsx scripts/export-cues.ts",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "sfx": "tsx scripts/synth-sfx.ts"
   },
   "dependencies": {
     "@remotion/cli": "4.0.536",
     "@remotion/google-fonts": "4.0.536",
+    "@remotion/motion-blur": "4.0.536",
+    "@remotion/noise": "4.0.536",
+    "@remotion/paths": "4.0.536",
     "react": "19.2.0",
     "react-dom": "19.2.0",
     "remotion": "4.0.536"
