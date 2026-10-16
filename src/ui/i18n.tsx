@@ -56,17 +56,17 @@ export function useI18n(): I18n {
   return i18n;
 }
 
-/** The switch between English and French, shown on every screen. */
+/** The switch between English and French for the interface. */
 export function LanguageSwitch() {
   const { language, t, setLanguage } = useI18n();
   return (
-    <div className="language-switch" role="group" aria-label={t.switcher.label}>
+    <div className="segmented segmented-text" role="group" aria-label={t.switcher.label}>
       {languages.map((option) => (
         <button
           key={option}
           type="button"
           lang={option}
-          className={option === language ? "language-option language-current" : "language-option"}
+          className="segmented-option"
           aria-pressed={option === language}
           title={uiMessages[option].languageNames[option]}
           onClick={() => setLanguage(option)}

@@ -14,8 +14,8 @@ const en = {
     openSettings: "Open settings",
     settings: "Settings",
     backToPacks: "Back to packs",
+    newInterview: "New interview",
     deleting: "Deleting…",
-    interviewer: "Interviewer",
     you: "You",
     followUp: "Follow-up",
     question: (number: number) => `Question ${number}`,
@@ -26,15 +26,57 @@ const en = {
   switcher: { label: "Interface language" },
 
   home: {
-    tagline: "AI technical interview simulator, running on your machine.",
-    pastInterviews: "Past interviews",
+    heading: "What role are you interviewing for?",
+    tagline: "A technical interview with an AI recruiter, running on your machine.",
+    inputLabel: "Job offer or role description",
+    placeholder: "Paste a job offer or describe the role you're targeting…",
+    inputHint: "Enter to read it · Shift+Enter for a new line",
+    submit: "Read the offer",
+    interviewIn: "Interview in",
+    orPick: "Or start right away with a pack",
+    chipLabel: (title: string) => `Start a ${title} interview`,
+    combine: "Combine several packs…",
     connecting: "Connecting to the local server…",
+  },
+
+  review: {
+    back: "← Edit the offer",
+    backHome: "← Back",
+    title: "Here's what the offer asks for",
+    buildTitle: "Build your interview",
+    buildHint: "Add one or more packs. With several, the recruiter takes a question from each in turn.",
+    packsTitle: "Packs in this interview",
+    noPacks: "No pack yet.",
+    removePack: (title: string) => `Remove ${title}`,
+    addPacks: "Add packs",
+    hidePacks: "Hide the pack list",
+  },
+
+  recruiter: {
+    names: ["Camille", "Alex", "Sacha", "Noa", "Robin", "Eden"],
+    roles: ["Tech Lead", "Engineering Manager", "Senior Developer", "Staff Engineer"],
+    thinking: (name: string) => `${name} is thinking…`,
+    debriefFrom: (name: string) => `${name}'s notes`,
+  },
+
+  sidebar: {
+    label: "Past interviews and settings",
+    show: "Show sidebar",
+    hide: "Hide sidebar",
+    history: "Past interviews",
+    delete: (title: string) => `Delete ${title}`,
+  },
+
+  theme: {
+    label: "Theme",
+    system: "Match system",
+    light: "Light",
+    dark: "Dark",
   },
 
   picker: {
     noPacks: "No interview pack is available. The terminal running Mockroom lists the packs it couldn't load.",
     title: "Interview packs",
-    hint: "Pick one or more. With several, the interviewer takes a question from each in turn.",
     technology: "Technology",
     allTechnologies: "All technologies",
     level: "Level",
@@ -53,12 +95,6 @@ const en = {
   setup: {
     interviewLanguage: "Interview language",
     interviewLanguageHint: "The interviewer and the debrief use this language, whatever the packs' language.",
-    jobOfferTitle: "Tailor it to a job offer",
-    jobOfferHint:
-      "Optional. Paste a job offer: your AI finds the technologies and level it asks for, and the matching packs are picked for you.",
-    jobOfferLabel: "Job offer",
-    jobOfferPlaceholder: "Paste the job offer here…",
-    detect: "Detect technologies",
     detecting: "Reading the job offer…",
     pickByHand: "You can still pick packs by hand below.",
     detectedTitle: "Detected in the job offer",
@@ -74,7 +110,6 @@ const en = {
     uncuratedHint:
       "Uncurated: no pack covers it yet, so the interviewer writes these questions from the AI's own knowledge. They may be less precise.",
     noTechnology: "No technology left: add one, or pick packs below.",
-    forget: "Forget this job offer",
     summaryTitle: "Your interview",
     nothingChosen: "Pick at least one pack, or detect technologies from a job offer.",
     start: "Start interview",
@@ -88,13 +123,11 @@ const en = {
     followUpProgress: (followUp: number) => `Follow-up ${followUp}`,
     end: "End interview",
     ending: "Ending…",
-    progressLabel: "Interview progress",
     conversation: "Conversation",
     notSent: "Your answer was not sent; you can send it again.",
     stillGoing: "The interview is still going; you can try to end it again.",
     tryAgain: "Try again",
     writingDebrief: "Writing your debrief, question by question… This can take a minute.",
-    interviewerWriting: "The interviewer is writing…",
     typeAnswer: "Type your answer…",
     yourAnswer: "Your answer",
     composerHint: "Enter to send · Shift+Enter for a new line",
@@ -120,16 +153,11 @@ const en = {
 
   history: {
     deletePrompt: "Delete this interview from your history? Its transcript and debrief will be gone for good.",
-    title: "Past interviews",
     privacy: "Saved on this computer only. Nothing is sent anywhere.",
     loading: "Loading your interviews…",
     empty: "No interview yet. Once you finish or end one, it shows up here.",
     interviewIn: (language: string) => `In ${language}`,
     noDebrief: "No debrief",
-    delete: "Delete",
-    open: "Open",
-    back: "← Past interviews",
-    backToPacks: "← Back to packs",
     loadingInterview: "Loading the interview…",
     tabs: "Interview",
     debriefTab: "Debrief",
@@ -197,8 +225,8 @@ const fr: UIMessages = {
     openSettings: "Ouvrir les réglages",
     settings: "Réglages",
     backToPacks: "Retour aux packs",
+    newInterview: "Nouvel entretien",
     deleting: "Suppression…",
-    interviewer: "Recruteur",
     you: "Toi",
     followUp: "Relance",
     question: (number) => `Question ${number}`,
@@ -209,16 +237,58 @@ const fr: UIMessages = {
   switcher: { label: "Langue de l'interface" },
 
   home: {
-    tagline: "Simulateur d'entretien technique avec une IA, qui tourne sur ta machine.",
-    pastInterviews: "Entretiens passés",
+    heading: "Pour quel poste tu passes l'entretien ?",
+    tagline: "Un entretien technique avec un recruteur IA, qui tourne sur ta machine.",
+    inputLabel: "Offre d'emploi ou description du poste",
+    placeholder: "Colle une offre d'emploi ou décris le poste que tu vises…",
+    inputHint: "Entrée pour la lire · Maj+Entrée pour aller à la ligne",
+    submit: "Lire l'offre",
+    interviewIn: "Entretien en",
+    orPick: "Ou commence tout de suite avec un pack",
+    chipLabel: (title) => `Commencer un entretien ${title}`,
+    combine: "Combiner plusieurs packs…",
     connecting: "Connexion au serveur local…",
+  },
+
+  review: {
+    back: "← Modifier l'offre",
+    backHome: "← Retour",
+    title: "Voici ce que demande l'offre",
+    buildTitle: "Compose ton entretien",
+    buildHint: "Ajoute un ou plusieurs packs. Avec plusieurs packs, le recruteur pioche une question dans chacun, à tour de rôle.",
+    packsTitle: "Packs de cet entretien",
+    noPacks: "Aucun pack pour l'instant.",
+    removePack: (title) => `Retirer ${title}`,
+    addPacks: "Ajouter des packs",
+    hidePacks: "Masquer la liste des packs",
+  },
+
+  recruiter: {
+    names: ["Camille", "Alex", "Sacha", "Noa", "Robin", "Eden"],
+    roles: ["Lead technique", "Manager technique", "Dev senior", "Architecte logiciel"],
+    thinking: (name) => `${name} réfléchit…`,
+    debriefFrom: (name) => `Les notes de ${name}`,
+  },
+
+  sidebar: {
+    label: "Entretiens passés et réglages",
+    show: "Afficher le panneau",
+    hide: "Masquer le panneau",
+    history: "Entretiens passés",
+    delete: (title) => `Supprimer ${title}`,
+  },
+
+  theme: {
+    label: "Thème",
+    system: "Comme le système",
+    light: "Clair",
+    dark: "Sombre",
   },
 
   picker: {
     noPacks:
       "Aucun pack d'entretien n'est disponible. Le terminal où tourne Mockroom liste les packs qu'il n'a pas pu charger.",
     title: "Packs d'entretien",
-    hint: "Choisis-en un ou plusieurs. Avec plusieurs packs, le recruteur pioche une question dans chacun, à tour de rôle.",
     technology: "Technologie",
     allTechnologies: "Toutes les technologies",
     level: "Niveau",
@@ -237,12 +307,6 @@ const fr: UIMessages = {
   setup: {
     interviewLanguage: "Langue de l'entretien",
     interviewLanguageHint: "Le recruteur et le bilan utilisent cette langue, quelle que soit la langue des packs.",
-    jobOfferTitle: "L'adapter à une offre d'emploi",
-    jobOfferHint:
-      "Facultatif. Colle une offre d'emploi : ton IA repère les technologies et le niveau demandés, et les packs qui correspondent sont choisis pour toi.",
-    jobOfferLabel: "Offre d'emploi",
-    jobOfferPlaceholder: "Colle l'offre d'emploi ici…",
-    detect: "Détecter les technologies",
     detecting: "Lecture de l'offre d'emploi…",
     pickByHand: "Tu peux quand même choisir des packs à la main ci-dessous.",
     detectedTitle: "Repéré dans l'offre d'emploi",
@@ -258,7 +322,6 @@ const fr: UIMessages = {
     uncuratedHint:
       "Hors pack : aucun pack ne couvre encore cette technologie, donc le recruteur écrit ces questions à partir des connaissances de l'IA. Elles peuvent être moins précises.",
     noTechnology: "Plus aucune technologie : ajoutes-en une, ou choisis des packs ci-dessous.",
-    forget: "Oublier cette offre d'emploi",
     summaryTitle: "Ton entretien",
     nothingChosen: "Choisis au moins un pack, ou détecte les technologies d'une offre d'emploi.",
     start: "Commencer l'entretien",
@@ -272,13 +335,11 @@ const fr: UIMessages = {
     followUpProgress: (followUp) => `Relance ${followUp}`,
     end: "Terminer l'entretien",
     ending: "Fin en cours…",
-    progressLabel: "Avancement de l'entretien",
     conversation: "Conversation",
     notSent: "Ta réponse n'a pas été envoyée ; tu peux la renvoyer.",
     stillGoing: "L'entretien continue ; tu peux réessayer de le terminer.",
     tryAgain: "Réessayer",
     writingDebrief: "Rédaction de ton bilan, question par question… Cela peut prendre une minute.",
-    interviewerWriting: "Le recruteur écrit…",
     typeAnswer: "Écris ta réponse…",
     yourAnswer: "Ta réponse",
     composerHint: "Entrée pour envoyer · Maj+Entrée pour aller à la ligne",
@@ -304,16 +365,11 @@ const fr: UIMessages = {
 
   history: {
     deletePrompt: "Supprimer cet entretien de ton historique ? Sa transcription et son bilan seront définitivement perdus.",
-    title: "Entretiens passés",
     privacy: "Enregistrés sur cet ordinateur uniquement. Rien n'est envoyé ailleurs.",
     loading: "Chargement de tes entretiens…",
     empty: "Aucun entretien pour l'instant. Dès que tu en termines un, il apparaît ici.",
     interviewIn: (language) => `En ${language.toLowerCase()}`,
     noDebrief: "Pas de bilan",
-    delete: "Supprimer",
-    open: "Ouvrir",
-    back: "← Entretiens passés",
-    backToPacks: "← Retour aux packs",
     loadingInterview: "Chargement de l'entretien…",
     tabs: "Entretien",
     debriefTab: "Bilan",
@@ -322,7 +378,8 @@ const fr: UIMessages = {
       "Cet entretien n'a pas de bilan : il n'a pas pu être rédigé, ou Mockroom a été fermé avant qu'il soit prêt. La transcription est toujours là.",
     deleteInterview: "Supprimer cet entretien",
     allAnswered: (total) => `Réponse aux ${total} questions`,
-    endedEarly: (answered, total) => `Terminé plus tôt · ${answered} questions sur ${total} répondues`,
+    endedEarly: (answered, total) =>
+      `Terminé plus tôt · ${answered} ${answered > 1 ? "questions répondues" : "question répondue"} sur ${total}`,
   },
 
   settings: {

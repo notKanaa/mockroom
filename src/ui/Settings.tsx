@@ -74,8 +74,8 @@ export function Settings({ firstLaunch, onBack }: SettingsProps) {
 
   if (loadError) {
     return (
-      <main className="settings">
-        <p className="status status-unreachable" role="alert">
+      <main className="page settings">
+        <p className="banner banner-error" role="alert">
           {loadError}
         </p>
       </main>
@@ -83,8 +83,8 @@ export function Settings({ firstLaunch, onBack }: SettingsProps) {
   }
   if (!view) {
     return (
-      <main className="settings">
-        <p className="status">{t.settings.loading}</p>
+      <main className="page settings">
+        <p className="page-status">{t.settings.loading}</p>
       </main>
     );
   }
@@ -166,17 +166,17 @@ export function Settings({ firstLaunch, onBack }: SettingsProps) {
     : [];
 
   return (
-    <main className="settings">
-      <header className="history-header">
-        <button type="button" className="link-button" onClick={onBack}>
+    <main className="page settings">
+      <header className="page-header">
+        <button type="button" className="link-button back-link" onClick={onBack}>
           {firstLaunch && !view.configured ? t.settings.skip : t.settings.back}
         </button>
         <h1>{firstLaunch ? t.settings.welcome : t.settings.title}</h1>
-        <p className="history-note">{firstLaunch ? t.settings.welcomeIntro : t.settings.intro}</p>
+        <p className="page-intro">{firstLaunch ? t.settings.welcomeIntro : t.settings.intro}</p>
       </header>
 
       {fromEnvironment && (
-        <p className="notice" role="note">
+        <p className="banner" role="note">
           <RichText
             text={t.settings.envProvider(
               view.providers.find((provider) => provider.id === view.active?.provider)?.label ?? "",
@@ -329,11 +329,11 @@ export function Settings({ firstLaunch, onBack }: SettingsProps) {
               <button type="button" className="secondary-button" onClick={() => void test()} disabled={testing || !form.model.trim()}>
                 {testing ? t.settings.testing : t.settings.test}
               </button>
-              <button type="submit" disabled={saving || !form.model.trim()}>
+              <button type="submit" className="primary-button" disabled={saving || !form.model.trim()}>
                 {saving ? t.settings.saving : t.settings.save}
               </button>
               {savedMessage && firstLaunch && (
-                <button type="button" onClick={onBack}>
+                <button type="button" className="primary-button" onClick={onBack}>
                   {t.settings.chooseInterview}
                 </button>
               )}
