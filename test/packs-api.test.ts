@@ -23,21 +23,23 @@ describe("Pack picker API", () => {
     return ((await response.json()) as PackSummary[]).map((pack) => pack.id);
   }
 
-  it("lists the built-in pack with its themes", async () => {
+  it("lists the built-in packs with their themes", async () => {
     server = await startTestServer();
 
     const response = await fetch(`${server.url}/api/packs`);
+    const packs = (await response.json()) as PackSummary[];
 
-    expect(await response.json()).toEqual([
-      {
-        id: "react-junior-en",
-        technology: "React",
-        level: "junior",
-        language: "en",
-        title: "React — Junior",
-        themes: ["Components and JSX", "Props and state", "Effects", "Lists and keys", "Forms"],
-      },
-    ]);
+    expect(packs).toContainEqual({
+      id: "react-junior-en",
+      technology: "React",
+      level: "junior",
+      language: "en",
+      title: "React — Junior",
+      themes: ["Components and JSX", "Props and state", "Effects", "Lists and keys", "Forms"],
+    });
+    expect(packs.map((pack) => pack.id)).toEqual(
+      expect.arrayContaining(["symfony-junior-en", "symfony-junior-fr", "symfony-mid-en", "symfony-mid-fr"]),
+    );
   });
 
   it("filters packs by technology, level and language", async () => {

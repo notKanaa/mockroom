@@ -1,0 +1,160 @@
+id: symfony-mid-fr
+technology: Symfony
+level: mid
+language: fr
+title: Symfony — Confirmé
+
+# Rédigé pour Symfony 7.4 (LTS). La documentation officielle n'existe qu'en anglais.
+themes:
+  - name: Cycle de vie d'une requête et événements
+    questions:
+      - Racontez-moi ce que fait le HttpKernel entre la réception d'une Request et l'envoi de la Response.
+      - Dans quels cas utilisez-vous un listener ou un subscriber, et comment maîtrisez-vous l'ordre d'exécution des listeners ?
+    key_points:
+      - Le kernel déclenche kernel.request, puis kernel.controller et kernel.controller_arguments, appelle le contrôleur, puis déclenche kernel.response ; kernel.terminate s'exécute une fois la réponse envoyée
+      - kernel.view n'est déclenché que si le contrôleur ne renvoie pas de Response, et kernel.exception quand une exception est levée, pour la transformer en réponse
+      - Un listener sur kernel.request peut fournir directement une réponse, par exemple pour une page de maintenance, et le contrôleur n'est alors pas appelé
+      - "Un listener s'enregistre avec #[AsEventListener] ou le tag kernel.event_listener ; un subscriber implémente EventSubscriberInterface et déclare lui-même ses événements dans getSubscribedEvents()"
+      - Les listeners de priorité plus élevée passent en premier (0 par défaut), et stopPropagation() empêche les suivants de s'exécuter
+      - Un listener sur un événement du kernel vérifie en général isMainRequest() pour ignorer les sous-requêtes
+      - Déclencher ses propres événements découple le code qui provoque une action de celui qui y réagit ; debug:event-dispatcher liste les listeners enregistrés
+    resources:
+      - title: Événements et listeners
+        url: https://symfony.com/doc/7.4/event_dispatcher.html
+      - title: Les événements intégrés à Symfony
+        url: https://symfony.com/doc/7.4/reference/events.html
+      - title: Le composant HttpKernel
+        url: https://symfony.com/doc/7.4/components/http_kernel.html
+
+  - name: Le conteneur de services en profondeur
+    questions:
+      - Deux classes implémentent la même interface. Comment choisissez-vous laquelle est injectée, et où ?
+      - Comment regrouperiez-vous dans un seul service tous les services d'un même type, par exemple tous les formats d'export ?
+      - Comment ajoutez-vous un comportement autour d'un service existant, comme des logs ou du cache, sans toucher à sa classe ?
+    key_points:
+      - "Quand plusieurs services implémentent une interface, on crée un alias de l'interface vers l'implémentation par défaut, puis on en choisit une autre argument par argument avec #[Autowire(service: ...)], #[Target] ou un alias d'autowiring nommé"
+      - "Les tags regroupent des services : autoconfigure les ajoute selon l'interface ou avec #[AutoconfigureTag], et #[AutowireIterator] ou #[AutowireLocator] injecte tous les services portant ce tag"
+      - "La décoration avec #[AsDecorator] remplace un service par une enveloppe qui reçoit le service d'origine grâce à #[AutowireDecorated]"
+      - Le conteneur est compilé puis mis en cache ; des compiler passes peuvent modifier les définitions avant la compilation, et en production tout changement de configuration impose de reconstruire le cache
+      - Les services sont partagés par défaut ; shared false crée une nouvelle instance à chaque fois, et un service lazy n'est construit qu'à sa première utilisation
+      - Injecter tout le conteneur cache les dépendances d'une classe ; un service locator ou un service subscriber donne un accès paresseux à une liste fermée de services
+    resources:
+      - title: L'autowiring
+        url: https://symfony.com/doc/7.4/service_container/autowiring.html
+      - title: Les tags de services
+        url: https://symfony.com/doc/7.4/service_container/tags.html
+      - title: La décoration de services
+        url: https://symfony.com/doc/7.4/service_container/service_decoration.html
+
+  - name: Relations Doctrine et performances
+    questions:
+      - Expliquez la différence entre le côté propriétaire et le côté inverse d'une relation Doctrine. Pourquoi est-ce important ?
+      - Une page qui liste 50 articles avec leur auteur exécute 51 requêtes SQL. Que se passe-t-il, et comment corrigez-vous le problème ?
+    key_points:
+      - Doctrine gère les relations ManyToOne/OneToMany, OneToOne et ManyToMany ; le côté propriétaire (owning side) est celui qui porte la clé étrangère, c'est toujours le côté ManyToOne
+      - À l'enregistrement, Doctrine ne regarde que le côté propriétaire ; modifier seulement la collection du côté inverse n'enregistre rien, d'où des méthodes add/remove qui synchronisent les deux côtés
+      - inversedBy et mappedBy relient les deux côtés ; cascade persist enregistre les objets liés, orphanRemoval supprime les enfants retirés d'une collection, et onDelete sur la colonne de jointure pose une cascade au niveau de la base
+      - Les objets liés sont chargés à la demande (lazy loading) via des proxys, ce qui provoque le problème N+1 quand on boucle dessus
+      - On corrige le N+1 avec une jointure de chargement dans une méthode du repository (join() puis addSelect()) ; le panneau Doctrine du profiler affiche le nombre de requêtes d'une page
+      - Paginer une requête qui charge une collection par jointure demande le Paginator de Doctrine, car le LIMIT s'applique aux lignes SQL et non aux entités
+      - Les migrations sont relues avant d'être versionnées, et on ne modifie jamais une migration déjà jouée sur un autre environnement
+    resources:
+      - title: Les associations et relations Doctrine
+        url: https://symfony.com/doc/7.4/doctrine/associations.html
+      - title: Bases de données et Doctrine ORM
+        url: https://symfony.com/doc/7.4/doctrine.html
+
+  - name: Sécurité, authenticators et voters
+    questions:
+      - Comment feriez-vous pour que seul l'auteur d'un article puisse le modifier ?
+      - Comment sécuriseriez-vous une API JSON avec des jetons plutôt qu'avec un formulaire de connexion ?
+    key_points:
+      - "Les règles liées à un objet précis vont dans un voter : on hérite de Voter, on indique dans supports() si l'attribut et le sujet le concernent, et on décide dans voteOnAttribute() à partir de l'utilisateur du token"
+      - "On appelle les voters avec isGranted() et denyAccessUnlessGranted(), ou avec #[IsGranted('POST_EDIT', 'post')] où post est l'argument du contrôleur ; autoconfigure les enregistre automatiquement"
+      - L'access decision manager combine les votes ; avec la stratégie par défaut, affirmative, l'accès est accordé dès qu'un voter l'accorde
+      - Les rôles servent aux accès larges, les voters aux règles métier ; un voter garde la règle à un seul endroit au lieu de la répéter dans les contrôleurs et les templates
+      - Le firewall d'une API est en général stateless et authentifie chaque requête, par exemple avec l'authenticator access_token et un token handler qui renvoie un UserBadge pour un jeton valide
+      - Un authenticator sur mesure hérite d'AbstractAuthenticator, avec supports(), authenticate() qui renvoie un Passport (un UserBadge et des credentials), onAuthenticationSuccess() et onAuthenticationFailure()
+    resources:
+      - title: Vérifier les permissions avec les voters
+        url: https://symfony.com/doc/7.4/security/voters.html
+      - title: L'authentification par jeton d'accès
+        url: https://symfony.com/doc/7.4/security/access_token.html
+      - title: Écrire un authenticator sur mesure
+        url: https://symfony.com/doc/7.4/security/custom_authenticator.html
+
+  - name: Messenger
+    questions:
+      - Avec Messenger, comment enverriez-vous l'e-mail de bienvenue de façon asynchrone après l'inscription d'un utilisateur ?
+      - Un handler de message échoue à chaque fois. Que devient le message, et comment gérez-vous ce cas en production ?
+    key_points:
+      - "Un message est un simple objet PHP qui transporte des données ; son handler est un service marqué #[AsMessageHandler] dont la méthode __invoke() reçoit la classe du message"
+      - MessageBusInterface::dispatch() enveloppe le message dans une Envelope ; un message est traité de façon synchrone tant qu'il n'est pas routé vers un transport
+      - La section routing de messenger.yaml envoie une classe de message vers un transport asynchrone (Doctrine, AMQP, Redis…) configuré par un DSN comme MESSENGER_TRANSPORT_DSN
+      - Les workers tournent avec messenger:consume ; en production, un gestionnaire de processus comme Supervisor ou systemd les maintient en vie, avec des limites comme --time-limit ou --memory-limit
+      - Un worker garde le code en mémoire, donc un déploiement lance messenger:stop-workers et laisse le gestionnaire de processus les redémarrer
+      - Un message en échec est retenté, 3 fois par défaut avec un délai croissant, puis part dans le failure_transport, où messenger:failed:show le liste et messenger:failed:retry le relance
+      - Un message transporte des identifiants plutôt que des entités, et un handler doit pouvoir s'exécuter deux fois sans dégât ; lever UnrecoverableMessageHandlingException évite les nouvelles tentatives
+    resources:
+      - title: "Messenger : traitement synchrone et file de messages"
+        url: https://symfony.com/doc/7.4/messenger.html
+
+  - name: Formulaires et validation en profondeur
+    questions:
+      - Dans quels cas utilisez-vous un événement de formulaire, et dans quels cas un data transformer ?
+      - Comment validez-vous une règle qu'aucune contrainte native ne couvre, par exemple une date de fin qui doit être après la date de début ?
+      - Comment validez-vous le corps JSON d'une requête d'API ?
+    key_points:
+      - Les événements de formulaire (PRE_SET_DATA, PRE_SUBMIT, SUBMIT, POST_SUBMIT) adaptent le formulaire à ses données, par exemple pour n'ajouter un champ qu'en modification
+      - Un data transformer convertit la valeur de l'objet en valeur affichée dans le champ et inversement, par exemple entre une entité Issue et son numéro saisi dans un champ texte
+      - Une règle réutilisable demande une classe Constraint et un ConstraintValidator qui ajoute les violations ; les contraintes Callback ou Expression suffisent pour un cas isolé, comme comparer deux champs
+      - Les groupes de validation n'appliquent qu'une partie des contraintes, par exemple des règles différentes à l'inscription et à la modification du profil
+      - UniqueEntity est une contrainte de classe qui vérifie qu'une valeur n'existe pas déjà en base
+      - Lier un formulaire à un DTO plutôt qu'à l'entité évite que des données invalides se retrouvent dans des entités suivies par Doctrine
+      - "#[MapRequestPayload] désérialise le corps de la requête dans un DTO, le valide et répond 422 si la validation échoue"
+    resources:
+      - title: Les événements de formulaire
+        url: https://symfony.com/doc/7.4/form/events.html
+      - title: Les data transformers
+        url: https://symfony.com/doc/7.4/form/data_transformers.html
+      - title: Créer une contrainte de validation sur mesure
+        url: https://symfony.com/doc/7.4/validation/custom_constraint.html
+      - title: Les contrôleurs (mapper le contenu de la requête)
+        url: https://symfony.com/doc/7.4/controller.html
+
+  - name: Tests
+    questions:
+      - Comment gardez-vous des tests qui utilisent la base de données rapides et indépendants les uns des autres ?
+      - Comment remplacez-vous, dans vos tests, un service qui appelle une API externe ?
+    key_points:
+      - "Il y a trois niveaux : tests unitaires (TestCase), tests d'intégration (KernelTestCase et static::getContainer()) et tests applicatifs (WebTestCase et son client)"
+      - Les tests utilisent une base dédiée, souvent le nom habituel suivi de _test, définie dans .env.test ou .env.test.local
+      - DAMADoctrineTestBundle entoure chaque test d'une transaction annulée à la fin, pour qu'aucun test ne laisse de données aux suivants
+      - Des fixtures, avec DoctrineFixturesBundle ou des factories, chargent des données connues pour les tests
+      - En test, le conteneur donne aussi accès aux services privés, et static::getContainer()->set() remplace un service par une doublure
+      - Les appels HTTP externes sont simulés, par exemple avec MockHttpClient, pour que les tests ne dépendent pas du réseau
+      - Les tests applicatifs se connectent directement avec loginUser(), et des assertions comme assertEmailCount() vérifient les e-mails sans les envoyer
+    resources:
+      - title: Les tests
+        url: https://symfony.com/doc/7.4/testing.html
+      - title: Tester un repository Doctrine
+        url: https://symfony.com/doc/7.4/testing/database.html
+
+  - name: Configuration, secrets et déploiement
+    questions:
+      - Comment gérez-vous les secrets, comme les clés d'API, d'un environnement à l'autre dans Symfony ?
+      - Que comprend le déploiement en production d'une application Symfony ?
+    key_points:
+      - "Les variables d'environnement sont lues à l'exécution avec %env()% ; des processeurs comme int:, bool:, json:, file: ou default: les convertissent ou fournissent une valeur de secours"
+      - Les paramètres sont résolus à la compilation du conteneur, les variables d'environnement au moment où on les lit ; on peut donc changer une variable sans reconstruire le conteneur
+      - Le coffre-fort de secrets stocke des secrets chiffrés par environnement (secrets:set) ; la clé de déchiffrement de production n'est jamais versionnée et se déploie à part
+      - La production tourne avec APP_ENV=prod et APP_DEBUG=0 ; composer dump-env prod compile les fichiers .env dans .env.local.php pour ne pas les relire à chaque requête
+      - Un déploiement installe les dépendances avec composer install --no-dev --optimize-autoloader, joue les migrations, vide et préchauffe le cache, et construit les assets
+      - Les clés when@prod ou le dossier config/packages/prod/ contiennent les réglages propres à la production ; debug:config affiche la configuration finale d'un bundle
+    resources:
+      - title: Les processeurs de variables d'environnement
+        url: https://symfony.com/doc/7.4/configuration/env_var_processors.html
+      - title: Protéger les informations sensibles (secrets)
+        url: https://symfony.com/doc/7.4/configuration/secrets.html
+      - title: Déployer une application Symfony
+        url: https://symfony.com/doc/7.4/deployment.html

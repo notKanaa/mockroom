@@ -74,6 +74,8 @@ themes:
 
 The full built-in pack is [`packs/react-junior-en.yaml`](packs/react-junior-en.yaml).
 
+For complete packs at two levels and in both languages, see the Symfony packs: [`symfony-junior-en`](packs/symfony-junior-en.yaml), [`symfony-junior-fr`](packs/symfony-junior-fr.yaml), [`symfony-mid-en`](packs/symfony-mid-en.yaml) and [`symfony-mid-fr`](packs/symfony-mid-fr.yaml). They show how a theme grows from junior to mid level, how French packs are written in natural French rather than translated word for word, and how to quote YAML text that contains `: ` or `#`, such as PHP attributes like `#[Route]`.
+
 ### Fields
 
 | Field        | What to write                                                              |

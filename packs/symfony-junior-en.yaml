@@ -1,0 +1,139 @@
+id: symfony-junior-en
+technology: Symfony
+level: junior
+language: en
+title: Symfony — Junior
+
+# Written against Symfony 7.4 (LTS). Links point to the 7.4 documentation.
+themes:
+  - name: Routing and controllers
+    questions:
+      - How do you map a URL to a controller in Symfony, and what must the controller return?
+      - "Your route has a product id in the URL: how do you get it in the controller, and make sure the route only matches numbers?"
+    key_points:
+      - "Routes are usually declared with the #[Route] attribute on a controller method, with a path, a name and optionally the allowed HTTP methods; YAML or PHP config files work too"
+      - A controller receives the request and must return a Response object
+      - Extending AbstractController gives helpers such as render(), json(), redirectToRoute() and createNotFoundException()
+      - "A placeholder like {id} is passed to the controller argument with the same name; a requirement such as {id<\\d+>} restricts what it matches"
+      - Links are generated from the route name (generateUrl() in PHP, path() in Twig) rather than hard-coded, so changing a path doesn't break them
+      - php bin/console debug:router lists every route with its name, methods and path
+    resources:
+      - title: Routing
+        url: https://symfony.com/doc/7.4/routing.html
+      - title: Controller
+        url: https://symfony.com/doc/7.4/controller.html
+
+  - name: Services and dependency injection
+    questions:
+      - What is the service container, and how does autowiring decide what to inject?
+      - You need to send an email from a controller. How do you get the mailer, and why not create it with new?
+    key_points:
+      - A service is an object that does a job, such as a mailer, a repository or one of your own classes; the container creates it and shares the same instance by default
+      - With the default config/services.yaml, every class in src/ is registered as a service, with autowire and autoconfigure enabled
+      - Autowiring reads the type-hints of constructor arguments (classes or interfaces) and injects the matching service; controller actions can also receive services as arguments
+      - Services are private by default, so you inject them instead of fetching them from the container
+      - Injected dependencies make a class easier to test and to reconfigure than objects created with new inside it
+      - "Scalar values such as a parameter or an env var can't be guessed: pass them with bind in services.yaml or the #[Autowire] attribute"
+      - php bin/console debug:autowiring lists the types you can type-hint
+    resources:
+      - title: Service Container
+        url: https://symfony.com/doc/7.4/service_container.html
+      - title: Defining Service Dependencies Automatically (Autowiring)
+        url: https://symfony.com/doc/7.4/service_container/autowiring.html
+
+  - name: Doctrine ORM
+    questions:
+      - You add a new entity to your project. How do you create its table, and keep the database schema in sync between developers and production?
+      - What is the difference between persist() and flush() in Doctrine?
+    key_points:
+      - "An entity is a PHP class mapped to a table with attributes such as #[ORM\\Entity], #[ORM\\Id] and #[ORM\\Column]; make:entity can generate it"
+      - Schema changes go through migrations, generated from the mapping with make:migration (or doctrine:migrations:diff) and run with doctrine:migrations:migrate
+      - Migrations are committed with the code and run on every environment; doctrine:schema:update is not meant for production
+      - persist() tells the entity manager to manage a new object; flush() computes the changes of all managed objects and runs the SQL queries
+      - Objects fetched from the database are already managed, so changing them and calling flush() is enough to save them
+      - Each entity has a repository with find(), findBy(), findOneBy() and findAll(); custom queries go in repository methods using the QueryBuilder or DQL
+    resources:
+      - title: Databases and the Doctrine ORM
+        url: https://symfony.com/doc/7.4/doctrine.html
+
+  - name: Forms and validation
+    questions:
+      - Walk me through handling a form submission in a Symfony controller.
+      - How do you make sure a user's email is not blank and is a valid address?
+    key_points:
+      - A form type class extends AbstractType, adds its fields in buildForm() and sets data_class in configureOptions()
+      - The controller creates the form with createForm(), calls handleRequest() with the request, then checks isSubmitted() and isValid() before saving
+      - After a successful submission, the controller redirects so that refreshing the page doesn't submit the form again
+      - "Validation rules are constraints on the object, for example #[Assert\\NotBlank] and #[Assert\\Email] on a property; isValid() runs them"
+      - The validator also works outside forms, with ValidatorInterface::validate(), which returns the list of violations
+      - Forms have built-in CSRF protection, a hidden token checked on submit, once the Security CSRF component is installed and enabled
+    resources:
+      - title: Forms
+        url: https://symfony.com/doc/7.4/forms.html
+      - title: Validation
+        url: https://symfony.com/doc/7.4/validation.html
+
+  - name: Twig templates
+    questions:
+      - How do you share a common layout, like a header and footer, between several pages in Twig?
+      - Why is it risky to use the raw filter in Twig?
+    key_points:
+      - "{{ }} prints a value, {% %} runs logic such as if, for or block, and {# #} is a comment"
+      - "A child template uses {% extends 'base.html.twig' %} and overrides the blocks defined in the parent layout"
+      - include() reuses a template fragment; a controller renders a template with $this->render() and an array of variables
+      - Twig escapes output automatically, which protects against XSS; the raw filter turns escaping off, so it is only for trusted content
+      - path() and url() generate links from route names, asset() builds asset URLs, and the app variable gives access to app.user, app.request and flash messages
+    resources:
+      - title: Creating and Using Templates
+        url: https://symfony.com/doc/7.4/templates.html
+      - title: Twig for Template Designers
+        url: https://twig.symfony.com/doc/3.x/templates.html
+
+  - name: Security
+    questions:
+      - How do you restrict a page to administrators only?
+      - What is the difference between authentication and authorization in Symfony, and where does the firewall fit in?
+    key_points:
+      - Authentication checks who the user is, through the firewall and its authenticators such as form_login; authorization checks what they are allowed to do
+      - "Security is configured in config/packages/security.yaml: user providers, password hashers, firewalls and access_control"
+      - Only one firewall is active per request, the first whose pattern matches; the default dev firewall turns security off for the profiler and assets
+      - The user class implements UserInterface (getUserIdentifier(), getRoles()) and PasswordAuthenticatedUserInterface; passwords are hashed with UserPasswordHasherInterface, and the 'auto' hasher picks the best algorithm
+      - "Access is checked with access_control rules on URLs (only the first matching rule applies), the #[IsGranted('ROLE_ADMIN')] attribute, denyAccessUnlessGranted() in a controller or is_granted() in Twig"
+      - Roles are strings starting with ROLE_; role_hierarchy lets ROLE_ADMIN include other roles
+    resources:
+      - title: Security
+        url: https://symfony.com/doc/7.4/security.html
+      - title: Password Hashing and Verification
+        url: https://symfony.com/doc/7.4/security/passwords.html
+
+  - name: Configuration and environments
+    questions:
+      - What are Symfony environments, and how do you change a setting for production only?
+      - Where should the database password of a Symfony project live?
+    key_points:
+      - The environment comes from APP_ENV (dev, prod and test out of the box); APP_DEBUG turns debug mode on or off
+      - Configuration lives in config/packages/; files in config/packages/<env>/ or when@<env> keys override it for one environment
+      - .env holds committed defaults; .env.local holds machine-specific values, isn't committed and is ignored in the test environment; real environment variables win over .env files
+      - "Configuration reads environment variables with %env(DATABASE_URL)% and parameters with %parameter_name%"
+      - Passwords and API keys belong in real environment variables or the secrets vault, never committed in .env
+      - Configuration is compiled into the cache, so production needs cache:clear after a deployment
+    resources:
+      - title: Configuring Symfony
+        url: https://symfony.com/doc/7.4/configuration.html
+      - title: How to Keep Sensitive Information Secret
+        url: https://symfony.com/doc/7.4/configuration/secrets.html
+
+  - name: Testing
+    questions:
+      - What kinds of automated tests can you write in a Symfony application?
+      - How would you test that the home page answers successfully and shows its title?
+    key_points:
+      - Tests use PHPUnit, live in the tests/ folder and run with php bin/phpunit
+      - Unit tests extend TestCase and test one class in isolation
+      - Integration tests extend KernelTestCase and get real services from static::getContainer()
+      - Application tests extend WebTestCase; createClient() makes requests and assertions such as assertResponseIsSuccessful() and assertSelectorTextContains() check the response
+      - Tests run in the test environment (APP_ENV=test, configured in .env.test), usually with a separate test database
+      - loginUser() logs a user in for application tests without going through the login form
+    resources:
+      - title: Testing
+        url: https://symfony.com/doc/7.4/testing.html
