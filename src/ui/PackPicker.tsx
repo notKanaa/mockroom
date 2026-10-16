@@ -4,9 +4,11 @@ import { languages, useI18n } from "./i18n";
 
 interface PackPickerProps {
   packs: PackSummary[];
-  starting: boolean;
-  /** Starts an interview on the pack, held in `language`. */
-  onStart: (packId: string, language: Language) => void;
+  /** The packs added to the interview. */
+  selectedIds: string[];
+  onToggle: (packId: string) => void;
+  /** The interview language, to flag packs that will be translated. */
+  interviewLanguage: Language;
 }
 
 const levels: readonly PackLevel[] = ["junior", "mid", "senior"];
@@ -19,17 +21,10 @@ interface Filters {
 
 const noFilters: Filters = { technology: "", level: "", language: "" };
 
-/**
- * Lists the packs, filterable by technology, level and language. Each one starts
- * an interview, in the interview language picked above the list.
- */
-export function PackPicker({ packs, starting, onStart }: PackPickerProps) {
-  const { language, t } = useI18n();
+/** Lists the packs, filterable by technology, level and language. Each one can be added to the interview. */
+export function PackPicker({ packs, selectedIds, onToggle, interviewLanguage }: PackPickerProps) {
+  const { t } = useI18n();
   const [filters, setFilters] = useState<Filters>(noFilters);
-  const [chosenId, setChosenId] = useState<string | null>(null);
-  // Follows the interface language until the candidate picks one.
-  const [pickedLanguage, setPickedLanguage] = useState<Language | null>(null);
-  const interviewLanguage = pickedLanguage ?? language;
 
   const technologies = unique(packs.map((pack) => pack.technology)).sort((a, b) => a.localeCompare(b));
   const packLevels = levels.filter((level) => packs.some((pack) => pack.level === level));
@@ -58,28 +53,7 @@ export function PackPicker({ packs, starting, onStart }: PackPickerProps) {
   return (
     <section className="picker" aria-labelledby="picker-title">
       <h2 id="picker-title">{t.picker.title}</h2>
-
-      <fieldset className="interview-language">
-        <legend>{t.picker.interviewLanguage}</legend>
-        <div className="language-choices">
-          {languages.map((option) => (
-            <label
-              key={option}
-              className={`language-choice${option === interviewLanguage ? " language-choice-current" : ""}`}
-            >
-              <input
-                type="radio"
-                name="interview-language"
-                value={option}
-                checked={option === interviewLanguage}
-                onChange={() => setPickedLanguage(option)}
-              />
-              {t.languageNames[option]}
-            </label>
-          ))}
-        </div>
-        <p className="field-hint">{t.picker.interviewLanguageHint}</p>
-      </fieldset>
+      <p className="field-hint picker-hint">{t.picker.hint}</p>
 
       <div className="filters">
         <FilterSelect
@@ -115,30 +89,35 @@ export function PackPicker({ packs, starting, onStart }: PackPickerProps) {
       </p>
 
       <ul className="packs">
-        {shown.map((pack) => (
-          <li key={pack.id} className="pack">
-            <div className="pack-info">
-              <p className="pack-title">{pack.title}</p>
-              <p className="pack-meta">
-                {pack.technology} · {t.levels[pack.level]} · {t.languageNames[pack.language]}
-                {pack.language !== interviewLanguage && (
-                  <span className="pack-translated"> · {t.picker.translated(t.languageNames[interviewLanguage])}</span>
-                )}
-              </p>
-              <p className="pack-themes">{pack.themes.join(" · ")}</p>
-            </div>
-            <button
-              type="button"
-              disabled={starting}
-              onClick={() => {
-                setChosenId(pack.id);
-                onStart(pack.id, interviewLanguage);
-              }}
-            >
-              {starting && chosenId === pack.id ? t.picker.starting : t.picker.start}
-            </button>
-          </li>
-        ))}
+        {shown.map((pack) => {
+          const selected = selectedIds.includes(pack.id);
+          return (
+            <li key={pack.id} className={selected ? "pack pack-selected" : "pack"}>
+              <div className="pack-info">
+                <p className="pack-title">{pack.title}</p>
+                <p className="pack-meta">
+                  {pack.technology} · {t.levels[pack.level]} · {t.languageNames[pack.language]}
+                  {pack.language !== interviewLanguage && (
+                    <span className="pack-translated">
+                      {" "}
+                      · {t.picker.translated(t.languageNames[interviewLanguage])}
+                    </span>
+                  )}
+                </p>
+                <p className="pack-themes">{pack.themes.join(" · ")}</p>
+              </div>
+              <button
+                type="button"
+                className={selected ? undefined : "secondary-button"}
+                aria-pressed={selected}
+                aria-label={t.picker.addLabel(pack.title)}
+                onClick={() => onToggle(pack.id)}
+              >
+                {selected ? t.picker.added : t.picker.add}
+              </button>
+            </li>
+          );
+        })}
       </ul>
     </section>
   );

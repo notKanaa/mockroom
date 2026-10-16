@@ -2,7 +2,10 @@ import type {
   Debrief,
   Language,
   HistoryEntry,
+  InterviewRequest,
   InterviewSummary,
+  JobOfferDetection,
+  PackMatches,
   SavedInterview,
   TurnEvent,
 } from "../../src/server/api-types.js";
@@ -34,6 +37,25 @@ export class InterviewClient {
   /** Starts an interview, in `language` when given (else the pack's). */
   start(packId = "react-junior-en", language?: string): Promise<TurnResult> {
     return this.#turn("/api/interviews", { packId, ...(language !== undefined && { language }) });
+  }
+
+  /** Starts an interview from a whole setup: packs, technologies from a job offer, or both. */
+  startWith(request: InterviewRequest): Promise<TurnResult> {
+    return this.#turn("/api/interviews", request);
+  }
+
+  /** Asks Mockroom which technologies and level a job offer asks for. */
+  detect(jobOffer: string, language?: string): Promise<JsonResult<JobOfferDetection>> {
+    return this.#request("POST", "/api/job-offers/detect", { jobOffer, ...(language !== undefined && { language }) });
+  }
+
+  /** The packs matching edited technologies and level. */
+  match(technologies: string[], level: string, language?: string): Promise<JsonResult<PackMatches>> {
+    return this.#request("POST", "/api/job-offers/match", {
+      technologies,
+      level,
+      ...(language !== undefined && { language }),
+    });
   }
 
   answer(interviewId: string, answer: string): Promise<TurnResult> {
@@ -69,8 +91,17 @@ export class InterviewClient {
     return this.#request("POST", path);
   }
 
-  async #request<T>(method: string, path: string): Promise<JsonResult<T>> {
-    const response = await fetch(`${this.baseUrl}${path}`, { method, headers: this.#headers() });
+  async #request<T>(method: string, path: string, payload?: unknown): Promise<JsonResult<T>> {
+    const response = await fetch(
+      `${this.baseUrl}${path}`,
+      payload === undefined
+        ? { method, headers: this.#headers() }
+        : {
+            method,
+            headers: { ...this.#headers(), "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+          },
+    );
     if (response.status === 204) return { status: response.status };
     const body = (await response.json()) as T | { error: string };
     if (!response.ok) return { status: response.status, error: (body as { error: string }).error };

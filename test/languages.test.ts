@@ -45,7 +45,7 @@ describe("Interview language", () => {
     const { client, model } = await setUp([greeting, "FOLLOW-UP", followUp, debriefReply]);
 
     const started = await client.start("react-junior-en", "fr");
-    expect(started.interview).toMatchObject({ language: "fr", pack: { id: "react-junior-en" } });
+    expect(started.interview).toMatchObject({ language: "fr", packs: [{ id: "react-junior-en" }] });
     const id = started.interview!.id;
     const answered = await client.answer(id, "C'est du HTML dans le JavaScript.");
     expect(answered.text).toBe(followUp);

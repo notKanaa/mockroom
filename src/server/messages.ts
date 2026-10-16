@@ -9,6 +9,18 @@ const en = {
   answerShape: () => 'Send the answer as {"answer": "..."}.',
   notInHistory: () => "This interview isn't in your history.",
   internalError: () => "Something went wrong on Mockroom's side.",
+  packIdsShape: () => 'Send the packs as a list of pack ids, like {"packIds": ["react-junior-en"]}.',
+  technologiesShape: () => 'Send the technologies as a list of names, like {"technologies": ["React", "TypeScript"]}.',
+  invalidLevel: () => 'Choose the level: "junior", "mid" or "senior".',
+  emptySetup: () => "Choose at least one pack or one technology for the interview.",
+
+  // Job offers
+  emptyJobOffer: () => "Paste a job offer first.",
+  noTechnologyFound: () =>
+    "Mockroom found no technology in this job offer. Add the technologies yourself, or pick packs by hand below.",
+  detectionUnreadable: () =>
+    "The AI model's analysis of this job offer couldn't be read, even after a second try. Pick packs by hand below, or try again (a more capable model helps).",
+  detectionFailed: (reason: string) => `The job offer couldn't be analysed: ${reason} You can still pick packs by hand below.`,
 
   // Interviews
   interviewNotFound: () => "This interview doesn't exist.",
@@ -71,6 +83,18 @@ const fr: ServerMessages = {
   answerShape: () => 'Envoie la réponse sous la forme {"answer": "..."}.',
   notInHistory: () => "Cet entretien n'est pas dans ton historique.",
   internalError: () => "Un problème est survenu du côté de Mockroom.",
+  packIdsShape: () => `Envoie les packs sous forme de liste d'identifiants, comme {"packIds": ["react-junior-en"]}.`,
+  technologiesShape: () => 'Envoie les technologies sous forme de liste de noms, comme {"technologies": ["React", "TypeScript"]}.',
+  invalidLevel: () => "Choisis le niveau : « junior », « mid » (confirmé) ou « senior ».",
+  emptySetup: () => "Choisis au moins un pack ou une technologie pour l'entretien.",
+
+  emptyJobOffer: () => "Colle d'abord une offre d'emploi.",
+  noTechnologyFound: () =>
+    "Mockroom n'a trouvé aucune technologie dans cette offre d'emploi. Ajoute les technologies toi-même, ou choisis des packs à la main ci-dessous.",
+  detectionUnreadable: () =>
+    "L'analyse de cette offre d'emploi par le modèle d'IA est illisible, même après un deuxième essai. Choisis des packs à la main ci-dessous, ou réessaie (un modèle plus performant aide).",
+  detectionFailed: (reason) =>
+    `L'offre d'emploi n'a pas pu être analysée : ${reason} Tu peux quand même choisir des packs à la main ci-dessous.`,
 
   interviewNotFound: () => "Cet entretien n'existe pas.",
   interviewFinished: () => "Cet entretien est déjà terminé.",

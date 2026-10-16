@@ -2,12 +2,13 @@ import { randomUUID } from "node:crypto";
 import type { AIModel } from "../ai/model.js";
 import type { InterviewHistory } from "../history/store.js";
 import type { SavedInterview } from "../history/types.js";
-import { LocalizedError, localizedMessage, type Language, type Text } from "../i18n.js";
+import { LocalizedError, localizedMessage, type Text } from "../i18n.js";
 import { say } from "../messages.js";
 import type { Pack } from "../packs/pack.js";
 import { DebriefFormatError, writeDebrief } from "./debrief.js";
 import { shouldFollowUp } from "./follow-up.js";
 import { interviewerPrompt, type InterviewerStep, type PlannedQuestion } from "./prompt.js";
+import type { InterviewSetup } from "./setup.js";
 import type {
   Debrief,
   InterviewDetails,
@@ -65,9 +66,7 @@ const defaultFollowUpsPerQuestion = 2;
 
 interface Interview {
   id: string;
-  pack: Pack;
-  /** The language the interviewer and debrief use, whatever the pack's own language. */
-  language: Language;
+  setup: InterviewSetup;
   startedAt: Date;
   /** Set when the interview finishes. */
   finishedAt?: Date;
@@ -120,18 +119,17 @@ export class InterviewEngine {
   }
 
   /**
-   * Starts an interview on a pack, held in `language` (by default, the pack's).
+   * Starts an interview on packs and uncurated technologies, taken in turn.
    * The interviewer greets the candidate and asks question 1.
    */
-  start(pack: Pack, language: Language = pack.language): InterviewTurn {
-    const questions = planQuestions(pack, this.#questionsPerInterview);
+  start(setup: InterviewSetup): InterviewTurn {
+    const questions = planQuestions(setup, this.#questionsPerInterview);
     const firstQuestion = questions[0];
-    if (firstQuestion === undefined) throw new Error(`Pack "${pack.id}" has no questions.`);
+    if (firstQuestion === undefined) throw new Error("This interview has no questions.");
 
     const interview: Interview = {
       id: randomUUID(),
-      pack,
-      language,
+      setup,
       startedAt: this.#now(),
       questions,
       status: "setup",
@@ -161,7 +159,7 @@ export class InterviewEngine {
     const content = answer.trim();
     if (content === "") throw new InterviewError("empty-answer", say("emptyAnswer"));
 
-    const { pack, questionNumber, followUpNumber } = interview;
+    const { setup, questionNumber, followUpNumber } = interview;
     const transcript: TranscriptEntry[] = [
       ...interview.transcript,
       { role: "candidate", content, questionNumber },
@@ -177,7 +175,7 @@ export class InterviewEngine {
     const model = this.#model;
     return this.#turn(interview, transcript, async () => {
       const exchange = transcript.filter((entry) => entry.questionNumber === questionNumber);
-      return (await shouldFollowUp(model, { pack, question, exchange }))
+      return (await shouldFollowUp(model, { setup, question, exchange }))
         ? { kind: "follow-up", questionNumber, question, followUpNumber: followUpNumber + 1 }
         : moveOn;
     });
@@ -205,8 +203,7 @@ export class InterviewEngine {
     if (interview.debrief) return interview.debrief;
 
     const writing = (interview.writingDebrief ??= writeDebrief(this.#model, {
-      pack: interview.pack,
-      language: interview.language,
+      setup: interview.setup,
       answered: interview.questions.slice(0, interview.answeredQuestions),
       totalQuestions: interview.questions.length,
       transcript: interview.transcript,
@@ -280,8 +277,7 @@ export class InterviewEngine {
         yield { type: "interview", interview: { ...summarize(interview), ...next } };
 
         const messages = interviewerPrompt(
-          interview.pack,
-          interview.language,
+          interview.setup,
           interview.questions.length,
           transcript,
           step,
@@ -344,28 +340,53 @@ function questionTags(step: InterviewerStep): Pick<TranscriptEntry, "questionNum
   }
 }
 
-/** Picks the questions to ask from the pack, one theme after another. */
-function planQuestions(pack: Pack, count: number): PlannedQuestion[] {
+/**
+ * Picks the questions to ask: one from each pack and each uncurated technology
+ * in turn, until there are `count`. Within a pack, one theme after another.
+ */
+function planQuestions({ packs, uncurated }: InterviewSetup, count: number): PlannedQuestion[] {
+  const sources: PlannedQuestion[][] = [
+    ...packs.map(packQuestions),
+    ...uncurated.map((technology) =>
+      Array.from({ length: count }, (): PlannedQuestion => ({ kind: "uncurated", technology })),
+    ),
+  ];
   const questions: PlannedQuestion[] = [];
-  const longestTheme = Math.max(0, ...pack.themes.map((theme) => theme.questions.length));
-  for (let round = 0; round < longestTheme; round++) {
-    for (const theme of pack.themes) {
-      const text = theme.questions[round];
-      if (text !== undefined) questions.push({ theme, text });
+  const longest = Math.max(0, ...sources.map((source) => source.length));
+  for (let round = 0; round < longest; round++) {
+    for (const source of sources) {
+      const question = source[round];
+      if (question !== undefined) questions.push(question);
     }
   }
   return questions.slice(0, count);
 }
 
+/** A pack's questions, one theme after another. */
+function packQuestions(pack: Pack): PlannedQuestion[] {
+  const questions: PlannedQuestion[] = [];
+  const longestTheme = Math.max(0, ...pack.themes.map((theme) => theme.questions.length));
+  for (let round = 0; round < longestTheme; round++) {
+    for (const theme of pack.themes) {
+      const text = theme.questions[round];
+      if (text !== undefined) questions.push({ kind: "pack", pack, theme, text });
+    }
+  }
+  return questions;
+}
+
 function toSaved(interview: Interview): SavedInterview {
-  const { id, pack, startedAt, finishedAt = startedAt } = interview;
+  const { id, setup, startedAt, finishedAt = startedAt } = interview;
   return {
     formatVersion: 1,
     id,
     startedAt: startedAt.toISOString(),
     finishedAt: finishedAt.toISOString(),
-    packs: [{ id: pack.id, title: pack.title, technology: pack.technology, level: pack.level }],
-    language: interview.language,
+    packs: setup.packs.map(({ id, title, technology, level }) => ({ id, title, technology, level })),
+    technologies: [...setup.technologies],
+    uncurated: [...setup.uncurated],
+    level: setup.level,
+    language: setup.language,
     totalQuestions: interview.questions.length,
     answeredQuestions: interview.answeredQuestions,
     endedEarly: interview.endedEarly,
@@ -377,8 +398,11 @@ function toSaved(interview: Interview): SavedInterview {
 function summarize(interview: Interview): InterviewSummary {
   return {
     id: interview.id,
-    pack: { id: interview.pack.id, title: interview.pack.title },
-    language: interview.language,
+    packs: interview.setup.packs.map(({ id, title, technology }) => ({ id, title, technology })),
+    technologies: [...interview.setup.technologies],
+    uncurated: [...interview.setup.uncurated],
+    level: interview.setup.level,
+    language: interview.setup.language,
     status: interview.status,
     questionNumber: interview.questionNumber,
     followUpNumber: interview.followUpNumber,

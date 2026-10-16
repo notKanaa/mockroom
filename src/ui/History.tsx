@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import type { HistoryEntry, SavedInterview, TranscriptEntry } from "../server/api-types";
 import { deleteSavedInterview, fetchSavedInterview, listHistory } from "./api";
 import { DebriefDetails } from "./DebriefView";
-import { formatDateTime, useI18n } from "./i18n";
+import { formatDateTime, interviewTitle, useI18n } from "./i18n";
 import type { UIMessages } from "./messages";
 import { Message } from "./Message";
 
@@ -61,7 +61,7 @@ export function HistoryList({ onOpen, onBack }: HistoryListProps) {
           {entries.map((entry) => (
             <li key={entry.id} className="pack">
               <div className="pack-info">
-                <p className="pack-title">{entry.packs.map((pack) => pack.title).join(" + ")}</p>
+                <p className="pack-title">{interviewTitle(entry, t)}</p>
                 <p className="pack-meta">
                   {formatDateTime(entry.startedAt, language)} ·{" "}
                   {t.history.interviewIn(t.languageNames[entry.language])}
@@ -137,7 +137,7 @@ export function SavedInterviewView({ interviewId, onBack }: SavedInterviewViewPr
         </button>
         {interview && (
           <>
-            <p className="room-pack history-pack">{interview.packs.map((pack) => pack.title).join(" + ")}</p>
+            <p className="room-pack history-pack">{interviewTitle(interview, t)}</p>
             <h1>{formatDateTime(interview.startedAt, language)}</h1>
             <p className="history-note">
               {t.history.interviewIn(t.languageNames[interview.language])} · {progressLabel(interview, t)}

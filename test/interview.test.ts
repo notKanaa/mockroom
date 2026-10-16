@@ -40,7 +40,10 @@ describe("Interview API", () => {
       interview: {
         id: expect.any(String),
         language: "en",
-        pack: { id: "react-junior-en", title: "React — Junior" },
+        packs: [{ id: "react-junior-en", title: "React — Junior", technology: "React" }],
+        technologies: [],
+        uncurated: [],
+        level: "junior",
         status: "asking",
         questionNumber: 1,
         followUpNumber: 0,

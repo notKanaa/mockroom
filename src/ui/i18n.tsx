@@ -92,6 +92,14 @@ export function formatDateTime(iso: string, language: Language): string {
   return new Date(iso).toLocaleString(language, { dateStyle: "medium", timeStyle: "short" });
 }
 
+/** An interview's name: its packs, then its uncurated technologies, e.g. "React — Junior + Go (uncurated)". */
+export function interviewTitle(
+  { packs, uncurated = [] }: { packs: { title: string }[]; uncurated?: string[] },
+  t: UIMessages,
+): string {
+  return [...packs.map((pack) => pack.title), ...uncurated.map((technology) => t.common.uncuratedTitle(technology))].join(" + ");
+}
+
 function initialLanguage(): Language {
   try {
     const saved = localStorage.getItem(storageKey);

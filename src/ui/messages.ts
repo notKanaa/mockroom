@@ -19,6 +19,8 @@ const en = {
     you: "You",
     followUp: "Follow-up",
     question: (number: number) => `Question ${number}`,
+    uncurated: "Uncurated",
+    uncuratedTitle: (technology: string) => `${technology} (uncurated)`,
   },
 
   switcher: { label: "Interface language" },
@@ -31,9 +33,8 @@ const en = {
 
   picker: {
     noPacks: "No interview pack is available. The terminal running Mockroom lists the packs it couldn't load.",
-    title: "Choose an interview pack",
-    interviewLanguage: "Interview language",
-    interviewLanguageHint: "The interviewer and the debrief use this language, whatever the pack's language.",
+    title: "Interview packs",
+    hint: "Pick one or more. With several, the interviewer takes a question from each in turn.",
     technology: "Technology",
     allTechnologies: "All technologies",
     level: "Level",
@@ -44,6 +45,38 @@ const en = {
     count: (count: number) => (count === 1 ? "1 pack" : `${count} packs`),
     clearFilters: "Clear filters",
     translated: (language: string) => `Asked in ${language}`,
+    add: "Add",
+    added: "✓ Added",
+    addLabel: (title: string) => `Add ${title} to the interview`,
+  },
+
+  setup: {
+    interviewLanguage: "Interview language",
+    interviewLanguageHint: "The interviewer and the debrief use this language, whatever the packs' language.",
+    jobOfferTitle: "Tailor it to a job offer",
+    jobOfferHint:
+      "Optional. Paste a job offer: your AI finds the technologies and level it asks for, and the matching packs are picked for you.",
+    jobOfferLabel: "Job offer",
+    jobOfferPlaceholder: "Paste the job offer here…",
+    detect: "Detect technologies",
+    detecting: "Reading the job offer…",
+    pickByHand: "You can still pick packs by hand below.",
+    detectedTitle: "Detected in the job offer",
+    detectedHint: "Check it, and edit anything the AI got wrong, before starting.",
+    technologies: "Technologies",
+    remove: (technology: string) => `Remove ${technology}`,
+    addTechnology: "Add a technology",
+    addPlaceholder: "e.g. TypeScript",
+    add: "Add",
+    level: "Level",
+    levelHint: "The interview is pitched at this level. Packs are matched at this level too.",
+    coveredBy: (titles: string) => `Pack: ${titles}`,
+    uncuratedHint:
+      "Uncurated: no pack covers it yet, so the interviewer writes these questions from the AI's own knowledge. They may be less precise.",
+    noTechnology: "No technology left: add one, or pick packs below.",
+    forget: "Forget this job offer",
+    summaryTitle: "Your interview",
+    nothingChosen: "Pick at least one pack, or detect technologies from a job offer.",
     start: "Start interview",
     starting: "Starting…",
   },
@@ -81,6 +114,8 @@ const en = {
     noGaps: "Nothing important was missing. Well done!",
     modelAnswer: "A model answer",
     toStudy: "To study",
+    uncuratedNote:
+      "No pack covers this technology: the AI wrote this question, and this feedback, from its own knowledge. Double-check it against the official documentation.",
   },
 
   history: {
@@ -167,6 +202,8 @@ const fr: UIMessages = {
     you: "Toi",
     followUp: "Relance",
     question: (number) => `Question ${number}`,
+    uncurated: "Hors pack",
+    uncuratedTitle: (technology) => `${technology} (hors pack)`,
   },
 
   switcher: { label: "Langue de l'interface" },
@@ -180,9 +217,8 @@ const fr: UIMessages = {
   picker: {
     noPacks:
       "Aucun pack d'entretien n'est disponible. Le terminal où tourne Mockroom liste les packs qu'il n'a pas pu charger.",
-    title: "Choisis un pack d'entretien",
-    interviewLanguage: "Langue de l'entretien",
-    interviewLanguageHint: "Le recruteur et le bilan utilisent cette langue, quelle que soit la langue du pack.",
+    title: "Packs d'entretien",
+    hint: "Choisis-en un ou plusieurs. Avec plusieurs packs, le recruteur pioche une question dans chacun, à tour de rôle.",
     technology: "Technologie",
     allTechnologies: "Toutes les technologies",
     level: "Niveau",
@@ -193,6 +229,38 @@ const fr: UIMessages = {
     count: (count) => (count === 1 ? "1 pack" : `${count} packs`),
     clearFilters: "Effacer les filtres",
     translated: (language) => `Posé en ${language.toLowerCase()}`,
+    add: "Ajouter",
+    added: "✓ Ajouté",
+    addLabel: (title) => `Ajouter ${title} à l'entretien`,
+  },
+
+  setup: {
+    interviewLanguage: "Langue de l'entretien",
+    interviewLanguageHint: "Le recruteur et le bilan utilisent cette langue, quelle que soit la langue des packs.",
+    jobOfferTitle: "L'adapter à une offre d'emploi",
+    jobOfferHint:
+      "Facultatif. Colle une offre d'emploi : ton IA repère les technologies et le niveau demandés, et les packs qui correspondent sont choisis pour toi.",
+    jobOfferLabel: "Offre d'emploi",
+    jobOfferPlaceholder: "Colle l'offre d'emploi ici…",
+    detect: "Détecter les technologies",
+    detecting: "Lecture de l'offre d'emploi…",
+    pickByHand: "Tu peux quand même choisir des packs à la main ci-dessous.",
+    detectedTitle: "Repéré dans l'offre d'emploi",
+    detectedHint: "Vérifie, et corrige ce que l'IA a mal compris, avant de commencer.",
+    technologies: "Technologies",
+    remove: (technology) => `Retirer ${technology}`,
+    addTechnology: "Ajouter une technologie",
+    addPlaceholder: "ex. TypeScript",
+    add: "Ajouter",
+    level: "Niveau",
+    levelHint: "L'entretien est calibré pour ce niveau. Les packs sont aussi choisis à ce niveau.",
+    coveredBy: (titles) => `Pack : ${titles}`,
+    uncuratedHint:
+      "Hors pack : aucun pack ne couvre encore cette technologie, donc le recruteur écrit ces questions à partir des connaissances de l'IA. Elles peuvent être moins précises.",
+    noTechnology: "Plus aucune technologie : ajoutes-en une, ou choisis des packs ci-dessous.",
+    forget: "Oublier cette offre d'emploi",
+    summaryTitle: "Ton entretien",
+    nothingChosen: "Choisis au moins un pack, ou détecte les technologies d'une offre d'emploi.",
     start: "Commencer l'entretien",
     starting: "Démarrage…",
   },
@@ -230,6 +298,8 @@ const fr: UIMessages = {
     noGaps: "Rien d'important ne manquait. Bravo !",
     modelAnswer: "Une réponse modèle",
     toStudy: "À étudier",
+    uncuratedNote:
+      "Aucun pack ne couvre cette technologie : l'IA a écrit cette question, et ce retour, à partir de ses propres connaissances. Vérifie-les dans la documentation officielle.",
   },
 
   history: {

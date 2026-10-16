@@ -5,9 +5,13 @@ import type {
   ConnectionTest,
   Debrief,
   HistoryEntry,
+  InterviewRequest,
   InterviewSummary,
+  JobOfferDetection,
   Language,
   OllamaModels,
+  PackLevel,
+  PackMatches,
   PackSummary,
   SavedInterview,
   TurnEvent,
@@ -20,9 +24,19 @@ export async function listPacks(): Promise<PackSummary[]> {
   return response.json() as Promise<PackSummary[]>;
 }
 
-/** Starts an interview on a pack, held in `language`. */
-export function startInterview(packId: string, language: Language, onEvent: (event: TurnEvent) => void) {
-  return playTurn("/api/interviews", { packId, language }, onEvent);
+/** Starts an interview on packs, technologies from a job offer, or both. */
+export function startInterview(request: InterviewRequest, onEvent: (event: TurnEvent) => void) {
+  return playTurn("/api/interviews", request, onEvent);
+}
+
+/** Asks the AI model which technologies and level a job offer asks for, with the matching packs. */
+export function detectJobOffer(jobOffer: string, language: Language): Promise<JobOfferDetection> {
+  return requestJson("POST", "/api/job-offers/detect", { jobOffer, language });
+}
+
+/** The packs matching technologies and a level, once the candidate has edited them. */
+export function matchPacks(technologies: string[], level: PackLevel, language: Language): Promise<PackMatches> {
+  return requestJson("POST", "/api/job-offers/match", { technologies, level, language });
 }
 
 export function sendAnswer(interviewId: string, answer: string, onEvent: (event: TurnEvent) => void) {

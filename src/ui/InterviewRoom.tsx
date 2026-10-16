@@ -1,5 +1,5 @@
 import { useEffect, useRef, type FormEvent, type KeyboardEvent } from "react";
-import { useI18n } from "./i18n";
+import { interviewTitle, useI18n } from "./i18n";
 import { Message } from "./Message";
 import type { useInterview } from "./useInterview";
 
@@ -58,7 +58,7 @@ export function InterviewRoom({ session, onOpenSettings }: InterviewRoomProps) {
         <div className="room-heading">
           <div>
             <p className="room-pack">
-              {interview.pack.title} · {t.languageNames[interview.language]}
+              {interviewTitle(interview, t)} · {t.languageNames[interview.language]}
             </p>
             <p className="room-progress" aria-live="polite">
               {progress}
