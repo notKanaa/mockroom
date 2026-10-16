@@ -4,6 +4,8 @@ import { deleteSavedInterview, fetchSavedInterview } from "./api";
 import { DebriefDetails } from "./DebriefView";
 import { formatDateTime, interviewTitle, useI18n } from "./i18n";
 import type { UIMessages } from "./messages";
+import { TrashIcon } from "./Icons";
+import { Banner, Button, PageHeader } from "./kit";
 import { Message } from "./Message";
 import { RecruiterBadge, recruiterFor, type Recruiter } from "./Recruiter";
 
@@ -51,22 +53,16 @@ export function SavedInterviewView({ interviewId, onDeleted }: SavedInterviewVie
 
   return (
     <main className="page">
-      {error && (
-        <p className="banner banner-error" role="alert">
-          {error}
-        </p>
-      )}
+      {error && <Banner tone="error">{error}</Banner>}
       {!interview && !error && <p className="page-status">{t.history.loadingInterview}</p>}
 
       {interview && (
         <>
-          <header className="page-header">
-            <RecruiterBadge recruiter={recruiter} detail={interviewTitle(interview, t)} />
-            <h1>{formatDateTime(interview.startedAt, language)}</h1>
-            <p className="page-intro">
-              {t.history.interviewIn(t.languageNames[interview.language])} · {progressLabel(interview, t)}
-            </p>
-          </header>
+          <PageHeader
+            lead={<RecruiterBadge recruiter={recruiter} detail={interviewTitle(interview, t)} />}
+            title={formatDateTime(interview.startedAt, language)}
+            intro={`${t.history.interviewIn(t.languageNames[interview.language])} · ${progressLabel(interview, t)}`}
+          />
 
           <div
             className="tabs"
@@ -96,15 +92,15 @@ export function SavedInterviewView({ interviewId, onDeleted }: SavedInterviewVie
                   recruiter={recruiter}
                 />
               ) : (
-                <p className="banner">{t.history.missingDebrief}</p>
+                <Banner>{t.history.missingDebrief}</Banner>
               ))}
             {tab === "transcript" && <Transcript interview={interview} recruiter={recruiter} />}
           </section>
 
           <footer className="page-footer">
-            <button type="button" className="danger-button" onClick={() => void remove()} disabled={deleting}>
+            <Button variant="danger" icon={<TrashIcon />} onClick={() => void remove()} disabled={deleting}>
               {deleting ? t.common.deleting : t.history.deleteInterview}
-            </button>
+            </Button>
           </footer>
         </>
       )}
@@ -153,7 +149,7 @@ function Transcript({ interview, recruiter }: { interview: SavedInterview; recru
         return (
           <section key={index} className="transcript-group">
             {group.questionNumber !== undefined && (
-              <h2 className="eyebrow">
+              <h2 className="transcript-heading">
                 {t.common.question(group.questionNumber)}
                 {theme && ` · ${theme}`}
               </h2>

@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 import type { Language } from "../server/api-types";
+import { Segmented } from "./kit";
 import { uiMessages, type UIMessages } from "./messages";
 
 export const languages: readonly Language[] = ["en", "fr"];
@@ -60,21 +61,16 @@ export function useI18n(): I18n {
 export function LanguageSwitch() {
   const { language, t, setLanguage } = useI18n();
   return (
-    <div className="segmented segmented-text" role="group" aria-label={t.switcher.label}>
-      {languages.map((option) => (
-        <button
-          key={option}
-          type="button"
-          lang={option}
-          className="segmented-option"
-          aria-pressed={option === language}
-          title={uiMessages[option].languageNames[option]}
-          onClick={() => setLanguage(option)}
-        >
-          {option.toUpperCase()}
-        </button>
-      ))}
-    </div>
+    <Segmented
+      label={t.switcher.label}
+      value={language}
+      onChange={setLanguage}
+      options={languages.map((option) => ({
+        value: option,
+        label: option.toUpperCase(),
+        name: uiMessages[option].languageNames[option],
+      }))}
+    />
   );
 }
 

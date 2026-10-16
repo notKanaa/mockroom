@@ -4,6 +4,8 @@ import { sameTechnology } from "../server/packs/technology";
 import { matchPacks } from "./api";
 import { LanguagePicker } from "./Home";
 import { interviewTitle, useI18n } from "./i18n";
+import { PlusIcon } from "./Icons";
+import { Button, Card, Hint, PageHeader } from "./kit";
 import { PackPicker } from "./PackPicker";
 
 interface InterviewSetupProps {
@@ -114,26 +116,21 @@ export function InterviewSetup({
 
   return (
     <div className="setup">
-      <header className="page-header">
-        <button type="button" className="link-button back-link" onClick={onBack}>
-          {detection ? t.review.back : t.review.backHome}
-        </button>
-        <h1>{detection ? t.review.title : t.review.buildTitle}</h1>
-        <p className="page-intro">{detection ? t.setup.detectedHint : t.review.buildHint}</p>
-      </header>
+      <PageHeader
+        back={{ label: detection ? t.review.back : t.review.backHome, onClick: onBack }}
+        title={detection ? t.review.title : t.review.buildTitle}
+        intro={detection ? t.setup.detectedHint : t.review.buildHint}
+      />
 
       {detection && <DetectionEditor detection={detection} selectedPacks={selectedPacks} onChange={setDetection} />}
 
-      <section className="card" aria-labelledby="setup-packs-title">
-        <h2 id="setup-packs-title" className="card-title">
-          {t.review.packsTitle}
-        </h2>
+      <Card title={t.review.packsTitle} id="setup-packs-title">
         {selectedPacks.length === 0 ? (
-          <p className="field-hint">{t.review.noPacks}</p>
+          <Hint>{t.review.noPacks}</Hint>
         ) : (
-          <ul className="chips">
+          <ul className="chips chips-start">
             {selectedPacks.map((pack) => (
-              <li key={pack.id} className="chip chip-static">
+              <li key={pack.id} className="chip chip-selected">
                 {pack.title}
                 <button
                   type="button"
@@ -148,15 +145,18 @@ export function InterviewSetup({
             ))}
           </ul>
         )}
-        <button
-          type="button"
-          className="link-button disclosure"
-          aria-expanded={showPicker}
-          aria-controls="setup-picker"
-          onClick={() => setShowPicker((shown) => !shown)}
-        >
-          {showPicker ? t.review.hidePacks : t.review.addPacks}
-        </button>
+        <div>
+          <Button
+            variant="ghost"
+            size="sm"
+            icon={showPicker ? undefined : <PlusIcon />}
+            aria-expanded={showPicker}
+            aria-controls="setup-picker"
+            onClick={() => setShowPicker((shown) => !shown)}
+          >
+            {showPicker ? t.review.hidePacks : t.review.addPacks}
+          </Button>
+        </div>
         {showPicker && (
           <div id="setup-picker">
             <PackPicker
@@ -167,11 +167,11 @@ export function InterviewSetup({
             />
           </div>
         )}
-      </section>
+      </Card>
 
       <section className="setup-summary" aria-labelledby="setup-summary-title">
         <div className="setup-summary-text">
-          <h2 id="setup-summary-title" className="eyebrow">
+          <h2 id="setup-summary-title" className="setup-summary-label">
             {t.setup.summaryTitle}
           </h2>
           <p aria-live="polite">
@@ -179,9 +179,9 @@ export function InterviewSetup({
           </p>
         </div>
         <LanguagePicker value={interviewLanguage} onChange={onLanguageChange} />
-        <button type="button" className="primary-button" disabled={starting || nothingChosen} onClick={start}>
+        <Button variant="primary" disabled={starting || nothingChosen} onClick={start}>
           {starting ? t.setup.starting : t.setup.start}
-        </button>
+        </Button>
       </section>
     </div>
   );
@@ -221,14 +221,10 @@ function DetectionEditor({ detection, selectedPacks, onChange }: DetectionEditor
   );
 
   return (
-    <section className="card detection" aria-labelledby="detection-title">
-      <h2 id="detection-title" className="card-title">
-        {t.setup.detectedTitle}
-      </h2>
-
-      <p className="detection-label">{t.setup.technologies}</p>
+    <Card title={t.setup.detectedTitle} id="detection-title" className="detection">
+      <p className="field-label">{t.setup.technologies}</p>
       {detection.technologies.length === 0 ? (
-        <p className="field-hint">{t.setup.noTechnology}</p>
+        <Hint>{t.setup.noTechnology}</Hint>
       ) : (
         <ul className="technologies">
           {detection.technologies.map((technology) => {
@@ -257,7 +253,7 @@ function DetectionEditor({ detection, selectedPacks, onChange }: DetectionEditor
           })}
         </ul>
       )}
-      {anyUncurated && <p className="field-hint">{t.setup.uncuratedHint}</p>}
+      {anyUncurated && <Hint>{t.setup.uncuratedHint}</Hint>}
 
       <form className="field-row technology-add" onSubmit={add}>
         <input
@@ -267,13 +263,13 @@ function DetectionEditor({ detection, selectedPacks, onChange }: DetectionEditor
           aria-label={t.setup.addTechnology}
           maxLength={40}
         />
-        <button type="submit" className="secondary-button" disabled={newTechnology.trim() === ""}>
+        <Button type="submit" disabled={newTechnology.trim() === ""}>
           {t.setup.add}
-        </button>
+        </Button>
       </form>
 
-      <label className="field detection-level">
-        <span className="detection-label">{t.setup.level}</span>
+      <label className="field">
+        <span className="field-label">{t.setup.level}</span>
         <select
           value={detection.level}
           onChange={(event) => onChange({ ...detection, level: event.target.value as PackLevel })}
@@ -285,7 +281,7 @@ function DetectionEditor({ detection, selectedPacks, onChange }: DetectionEditor
           ))}
         </select>
       </label>
-      <p className="field-hint">{t.setup.levelHint}</p>
-    </section>
+      <Hint>{t.setup.levelHint}</Hint>
+    </Card>
   );
 }

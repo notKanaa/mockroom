@@ -8,7 +8,8 @@ import { LanguageSwitch, useI18n } from "./i18n";
 import { SidebarIcon } from "./Icons";
 import { InterviewRoom } from "./InterviewRoom";
 import { Settings } from "./Settings";
-import { Sidebar } from "./Sidebar";
+import { IconButton } from "./kit";
+import { Brand, Sidebar } from "./Sidebar";
 import { ThemeSwitch } from "./theme";
 import { useInterview } from "./useInterview";
 
@@ -162,21 +163,14 @@ export function App() {
       <div className="scrim" onClick={() => setDrawerOpen(false)} aria-hidden="true" />
       <div className="main">
         <div className="topbar">
-          <button
-            type="button"
-            className="icon-button sidebar-show"
+          <IconButton
+            className="sidebar-show"
+            label={t.sidebar.show}
+            icon={<SidebarIcon />}
             onClick={() => setSidebar(true)}
-            aria-label={t.sidebar.show}
-            title={t.sidebar.show}
             aria-controls="sidebar"
-            aria-expanded="false"
-          >
-            <SidebarIcon />
-          </button>
-          <span className="brand topbar-brand">
-            <span className="brand-mark" aria-hidden="true" />
-            Mockroom
-          </span>
+          />
+          <Brand />
         </div>
         {content}
       </div>

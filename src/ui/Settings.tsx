@@ -2,6 +2,7 @@ import { useEffect, useState, type FormEvent } from "react";
 import type { AISettingsInput, AISettingsView, ConnectionTest, ProviderName } from "../server/api-types";
 import { fetchSettings, listOllamaModels, saveSettings, testConnection } from "./api";
 import { RichText, useI18n } from "./i18n";
+import { Banner, Button, PageHeader } from "./kit";
 
 interface SettingsProps {
   /** True when no AI provider is set up yet: the candidate is welcomed here before anything else. */
@@ -75,9 +76,7 @@ export function Settings({ firstLaunch, onBack }: SettingsProps) {
   if (loadError) {
     return (
       <main className="page settings">
-        <p className="banner banner-error" role="alert">
-          {loadError}
-        </p>
+        <Banner tone="error">{loadError}</Banner>
       </main>
     );
   }
@@ -167,16 +166,14 @@ export function Settings({ firstLaunch, onBack }: SettingsProps) {
 
   return (
     <main className="page settings">
-      <header className="page-header">
-        <button type="button" className="link-button back-link" onClick={onBack}>
-          {firstLaunch && !view.configured ? t.settings.skip : t.settings.back}
-        </button>
-        <h1>{firstLaunch ? t.settings.welcome : t.settings.title}</h1>
-        <p className="page-intro">{firstLaunch ? t.settings.welcomeIntro : t.settings.intro}</p>
-      </header>
+      <PageHeader
+        back={{ label: firstLaunch && !view.configured ? t.settings.skip : t.settings.back, onClick: onBack }}
+        title={firstLaunch ? t.settings.welcome : t.settings.title}
+        intro={firstLaunch ? t.settings.welcomeIntro : t.settings.intro}
+      />
 
       {fromEnvironment && (
-        <p className="banner" role="note">
+        <p className="ui-banner ui-banner-note" role="note">
           <RichText
             text={t.settings.envProvider(
               view.providers.find((provider) => provider.id === view.active?.provider)?.label ?? "",
@@ -217,14 +214,9 @@ export function Settings({ firstLaunch, onBack }: SettingsProps) {
                     onChange={(event) => update({ ollamaUrl: event.target.value })}
                     spellCheck={false}
                   />
-                  <button
-                    type="button"
-                    className="secondary-button"
-                    onClick={() => void refreshOllamaModels(form.ollamaUrl)}
-                    disabled={ollama.loading}
-                  >
+                  <Button onClick={() => void refreshOllamaModels(form.ollamaUrl)} disabled={ollama.loading}>
                     {ollama.loading ? t.settings.looking : t.settings.refreshModels}
-                  </button>
+                  </Button>
                 </div>
                 {view.ollamaUrl.source === "environment" && (
                   <p className="field-hint">
@@ -326,16 +318,16 @@ export function Settings({ firstLaunch, onBack }: SettingsProps) {
             )}
 
             <div className="settings-actions">
-              <button type="button" className="secondary-button" onClick={() => void test()} disabled={testing || !form.model.trim()}>
-                {testing ? t.settings.testing : t.settings.test}
-              </button>
-              <button type="submit" className="primary-button" disabled={saving || !form.model.trim()}>
+              <Button variant="primary" type="submit" disabled={saving || !form.model.trim()}>
                 {saving ? t.settings.saving : t.settings.save}
-              </button>
+              </Button>
+              <Button onClick={() => void test()} disabled={testing || !form.model.trim()}>
+                {testing ? t.settings.testing : t.settings.test}
+              </Button>
               {savedMessage && firstLaunch && (
-                <button type="button" className="primary-button" onClick={onBack}>
+                <Button variant="primary" onClick={onBack}>
                   {t.settings.chooseInterview}
-                </button>
+                </Button>
               )}
             </div>
           </>

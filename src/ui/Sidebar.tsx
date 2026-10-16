@@ -3,6 +3,7 @@ import type { HistoryEntry } from "../server/api-types";
 import { deleteSavedInterview, listHistory } from "./api";
 import { formatDateTime, interviewTitle, LanguageSwitch, useI18n } from "./i18n";
 import { GearIcon, PlusIcon, SidebarIcon, TrashIcon } from "./Icons";
+import { IconButton } from "./kit";
 import { ThemeSwitch } from "./theme";
 
 interface SidebarProps {
@@ -61,30 +62,17 @@ export function Sidebar({
   return (
     <nav className="sidebar" id="sidebar" aria-label={t.sidebar.label}>
       <div className="sidebar-top">
-        <span className="brand">
-          <span className="brand-mark" aria-hidden="true" />
-          Mockroom
-        </span>
-        <button
-          type="button"
-          className="icon-button"
-          onClick={onHide}
-          aria-label={t.sidebar.hide}
-          title={t.sidebar.hide}
-          aria-controls="sidebar"
-          aria-expanded="true"
-        >
-          <SidebarIcon />
-        </button>
+        <Brand />
+        <IconButton label={t.sidebar.hide} icon={<SidebarIcon />} onClick={onHide} aria-controls="sidebar" />
       </div>
 
-      <button type="button" className="new-interview" onClick={onNewInterview}>
+      <button type="button" className="sidebar-row sidebar-new" onClick={onNewInterview}>
         <PlusIcon />
         {t.common.newInterview}
       </button>
 
-      <h2 className="eyebrow sidebar-heading">{t.sidebar.history}</h2>
       <div className="sidebar-history">
+        <h2 className="sidebar-heading">{t.sidebar.history}</h2>
         {error && (
           <p className="sidebar-note sidebar-error" role="alert">
             {error}
@@ -110,28 +98,25 @@ export function Sidebar({
                       {!entry.hasDebrief && ` · ${t.history.noDebrief}`}
                     </span>
                   </button>
-                  <button
-                    type="button"
-                    className="icon-button history-delete"
+                  <IconButton
+                    className="history-delete"
+                    label={t.sidebar.delete(title)}
+                    icon={<TrashIcon />}
                     onClick={() => void remove(entry)}
                     disabled={deletingId === entry.id}
-                    aria-label={t.sidebar.delete(title)}
-                    title={t.sidebar.delete(title)}
-                  >
-                    <TrashIcon />
-                  </button>
+                  />
                 </li>
               );
             })}
           </ul>
         )}
+        <p className="sidebar-note">{t.history.privacy}</p>
       </div>
-      <p className="sidebar-note sidebar-privacy">{t.history.privacy}</p>
 
       <div className="sidebar-bottom">
         <button
           type="button"
-          className="sidebar-link"
+          className="sidebar-row"
           onClick={onOpenSettings}
           aria-current={settingsOpen ? "page" : undefined}
         >
@@ -144,5 +129,15 @@ export function Sidebar({
         </div>
       </div>
     </nav>
+  );
+}
+
+/** Mockroom's name with its mark: two discs face to face, a recruiter and a candidate. */
+export function Brand() {
+  return (
+    <span className="brand">
+      <span className="brand-mark" aria-hidden="true" />
+      Mockroom
+    </span>
   );
 }

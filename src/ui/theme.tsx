@@ -1,11 +1,10 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 import { useI18n } from "./i18n";
 import { MonitorIcon, MoonIcon, SunIcon } from "./Icons";
+import { Segmented } from "./kit";
 
 /** The theme the candidate picked: the operating system's, or always light or dark. */
 export type ThemeChoice = "system" | "light" | "dark";
-
-const themeChoices: readonly ThemeChoice[] = ["system", "light", "dark"];
 
 // Also read by the inline script in index.html, so the page doesn't flash the wrong theme.
 const storageKey = "mockroom.theme";
@@ -41,27 +40,17 @@ export function ThemeSwitch() {
   const theme = useContext(ThemeContext);
   const { t } = useI18n();
   if (!theme) throw new Error("ThemeSwitch needs a ThemeProvider.");
-  const icons = { system: MonitorIcon, light: SunIcon, dark: MoonIcon };
-
   return (
-    <div className="segmented" role="group" aria-label={t.theme.label}>
-      {themeChoices.map((option) => {
-        const Icon = icons[option];
-        return (
-          <button
-            key={option}
-            type="button"
-            className="segmented-option"
-            aria-pressed={option === theme.choice}
-            aria-label={t.theme[option]}
-            title={t.theme[option]}
-            onClick={() => theme.setChoice(option)}
-          >
-            <Icon />
-          </button>
-        );
-      })}
-    </div>
+    <Segmented
+      label={t.theme.label}
+      value={theme.choice}
+      onChange={theme.setChoice}
+      options={[
+        { value: "system", label: t.theme.system, icon: <MonitorIcon /> },
+        { value: "light", label: t.theme.light, icon: <SunIcon /> },
+        { value: "dark", label: t.theme.dark, icon: <MoonIcon /> },
+      ]}
+    />
   );
 }
 

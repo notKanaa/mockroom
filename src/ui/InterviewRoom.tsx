@@ -1,6 +1,7 @@
 import { useEffect, useRef, type FormEvent, type KeyboardEvent } from "react";
 import { interviewTitle, useI18n } from "./i18n";
 import { ArrowUpIcon } from "./Icons";
+import { Banner, Button, IconButton } from "./kit";
 import { Message } from "./Message";
 import { RecruiterBadge, recruiterFor } from "./Recruiter";
 import { useAutoGrow } from "./useAutoGrow";
@@ -72,9 +73,9 @@ export function InterviewRoom({ session, onOpenSettings }: InterviewRoomProps) {
           {progress}
         </p>
         {!finished && (
-          <button type="button" className="quiet-button" onClick={confirmEnd} disabled={streaming || ending}>
+          <Button variant="ghost" size="sm" onClick={confirmEnd} disabled={streaming || ending}>
             {ending ? t.room.ending : t.room.end}
-          </button>
+          </Button>
         )}
       </header>
 
@@ -92,36 +93,32 @@ export function InterviewRoom({ session, onOpenSettings }: InterviewRoomProps) {
           </ol>
 
           {error && (
-            <p className="room-error" role="alert">
+            <Banner tone="error">
               {error} {t.room.notSent}{" "}
-              <button type="button" className="link-button" onClick={onOpenSettings}>
+              <button type="button" className="ui-link" onClick={onOpenSettings}>
                 {t.common.openSettings}
               </button>
-            </p>
+            </Banner>
           )}
           {endError && (
-            <p className="room-error" role="alert">
+            <Banner tone="error">
               {endError} {t.room.stillGoing}
-            </p>
+            </Banner>
           )}
 
           {finished && (
             <div className="room-done" aria-live="polite">
               {debrief.error ? (
                 <>
-                  <p className="room-error" role="alert">
-                    {debrief.error}
-                  </p>
+                  <Banner tone="error">{debrief.error}</Banner>
                   <div className="button-row">
-                    <button type="button" className="secondary-button" onClick={session.reset}>
-                      {t.common.backToPacks}
-                    </button>
-                    <button type="button" className="secondary-button" onClick={onOpenSettings}>
-                      {t.common.settings}
-                    </button>
-                    <button type="button" className="primary-button" onClick={session.retryDebrief}>
+                    <Button variant="primary" onClick={session.retryDebrief}>
                       {t.room.tryAgain}
-                    </button>
+                    </Button>
+                    <Button onClick={onOpenSettings}>{t.common.settings}</Button>
+                    <Button variant="ghost" onClick={session.reset}>
+                      {t.common.newInterview}
+                    </Button>
                   </div>
                 </>
               ) : (
@@ -154,15 +151,13 @@ export function InterviewRoom({ session, onOpenSettings }: InterviewRoomProps) {
               rows={1}
               disabled={streaming}
             />
-            <button
+            <IconButton
               type="submit"
-              className="send-button"
+              variant="primary"
+              label={t.room.send}
+              icon={<ArrowUpIcon />}
               disabled={streaming || draft.trim() === ""}
-              aria-label={t.room.send}
-              title={t.room.send}
-            >
-              <ArrowUpIcon />
-            </button>
+            />
           </div>
           <p id="composer-hint" className="composer-hint">
             {t.room.composerHint}

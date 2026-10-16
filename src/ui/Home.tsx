@@ -1,9 +1,10 @@
-import { useRef, useState, type FormEvent, type KeyboardEvent } from "react";
+import { useId, useRef, useState, type FormEvent, type KeyboardEvent } from "react";
 import type { InterviewRequest, Language, PackSummary } from "../server/api-types";
 import { detectJobOffer } from "./api";
 import { languages, useI18n } from "./i18n";
-import { ArrowUpIcon } from "./Icons";
+import { ArrowUpIcon, PlusIcon } from "./Icons";
 import { InterviewSetup, type Detection } from "./InterviewSetup";
+import { Banner, IconButton } from "./kit";
 import { useAutoGrow } from "./useAutoGrow";
 
 interface HomeProps {
@@ -66,12 +67,12 @@ export function Home({ packs, loadError, starting, error, onStart, onOpenSetting
   }
 
   const startError = error && (
-    <p className="banner banner-error" role="alert">
+    <Banner tone="error">
       {error}{" "}
-      <button type="button" className="link-button" onClick={onOpenSettings}>
+      <button type="button" className="ui-link" onClick={onOpenSettings}>
         {t.common.openSettings}
       </button>
-    </p>
+    </Banner>
   );
 
   if (review && packs) {
@@ -112,33 +113,34 @@ export function Home({ packs, loadError, starting, error, onStart, onOpenSetting
           />
           <div className="prompt-bar">
             <LanguagePicker value={interviewLanguage} onChange={setPickedLanguage} />
-            <button
+            {detecting && (
+              <span className="prompt-status" role="status">
+                {t.setup.detecting}
+              </span>
+            )}
+            <IconButton
               type="submit"
-              className="send-button"
+              variant="primary"
+              label={t.home.submit}
+              icon={<ArrowUpIcon />}
               disabled={detecting || jobOffer.trim() === ""}
-              aria-label={t.home.submit}
-              title={t.home.submit}
-            >
-              <ArrowUpIcon />
-            </button>
+            />
           </div>
+          <span id="prompt-hint" className="visually-hidden">
+            {t.home.inputHint}
+          </span>
         </form>
-        <p id="prompt-hint" className="prompt-hint" aria-live="polite">
-          {detecting ? t.setup.detecting : t.home.inputHint}
-        </p>
 
-        {detectError && (
-          <p className="banner banner-error" role="alert">
-            {detectError} {t.setup.pickByHand}
-          </p>
-        )}
-        {startError}
-        {loadError && (
-          <p className="banner banner-error" role="alert">
-            {loadError}
-          </p>
-        )}
-        {!packs && !loadError && <p className="prompt-hint">{t.home.connecting}</p>}
+        <div className="home-messages">
+          {detectError && (
+            <Banner tone="error">
+              {detectError} {t.setup.pickByHand}
+            </Banner>
+          )}
+          {startError}
+          {loadError && <Banner tone="error">{loadError}</Banner>}
+          {!packs && !loadError && <p className="home-status">{t.home.connecting}</p>}
+        </div>
 
         {packs && (
           <PackChips
@@ -165,13 +167,7 @@ interface PackChipsProps {
 /** One chip per technology and level, starting an interview on its pack in one click. */
 function PackChips({ packs, interviewLanguage, disabled, onPick, onCombine }: PackChipsProps) {
   const { t } = useI18n();
-  if (packs.length === 0) {
-    return (
-      <p className="banner banner-error" role="alert">
-        {t.picker.noPacks}
-      </p>
-    );
-  }
+  if (packs.length === 0) return <Banner tone="error">{t.picker.noPacks}</Banner>;
 
   // The same technology and level can exist in several languages: the chip uses the interview's if it can.
   const chips = new Map<string, PackSummary>();
@@ -187,7 +183,7 @@ function PackChips({ packs, interviewLanguage, disabled, onPick, onCombine }: Pa
 
   return (
     <section className="chips-section" aria-labelledby="chips-title">
-      <h2 id="chips-title" className="eyebrow">
+      <h2 id="chips-title" className="chips-title">
         {t.home.orPick}
       </h2>
       <ul className="chips">
@@ -208,7 +204,8 @@ function PackChips({ packs, interviewLanguage, disabled, onPick, onCombine }: Pa
           );
         })}
         <li>
-          <button type="button" className="chip chip-ghost" disabled={disabled} onClick={onCombine}>
+          <button type="button" className="chip chip-quiet" disabled={disabled} onClick={onCombine}>
+            <PlusIcon />
             {t.home.combine}
           </button>
         </li>
@@ -217,27 +214,20 @@ function PackChips({ packs, interviewLanguage, disabled, onPick, onCombine }: Pa
   );
 }
 
-/** The interview language, as a small two-way switch. */
+/** The interview language, as a compact labelled drop-down. */
 export function LanguagePicker({ value, onChange }: { value: Language; onChange: (language: Language) => void }) {
   const { t } = useI18n();
+  const id = useId();
   return (
-    <div className="language-picker" title={t.setup.interviewLanguageHint}>
-      <span className="language-picker-label" id="interview-language-label">
-        {t.home.interviewIn}
-      </span>
-      <div className="segmented segmented-text" role="group" aria-labelledby="interview-language-label">
+    <span className="language-picker" title={t.setup.interviewLanguageHint}>
+      <label htmlFor={id}>{t.home.interviewIn}</label>
+      <select id={id} value={value} onChange={(event) => onChange(event.target.value as Language)}>
         {languages.map((option) => (
-          <button
-            key={option}
-            type="button"
-            className="segmented-option"
-            aria-pressed={option === value}
-            onClick={() => onChange(option)}
-          >
+          <option key={option} value={option}>
             {t.languageNames[option]}
-          </button>
+          </option>
         ))}
-      </div>
-    </div>
+      </select>
+    </span>
   );
 }

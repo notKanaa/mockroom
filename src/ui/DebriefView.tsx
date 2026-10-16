@@ -1,6 +1,7 @@
 import type { Debrief, DebriefQuestion, InterviewSummary } from "../server/api-types";
 import { interviewTitle, useI18n } from "./i18n";
 import { PlusIcon } from "./Icons";
+import { Banner, Button, PageHeader } from "./kit";
 import { Avatar, RecruiterBadge, recruiterFor, type Recruiter } from "./Recruiter";
 
 interface DebriefViewProps {
@@ -15,18 +16,17 @@ export function DebriefView({ interview, debrief, onDone }: DebriefViewProps) {
   const recruiter = recruiterFor(interview.id, t);
   return (
     <main className="page">
-      <header className="page-header">
-        <RecruiterBadge recruiter={recruiter} detail={interviewTitle(interview, t)} />
-        <h1>{t.debrief.title}</h1>
-      </header>
+      <PageHeader
+        lead={<RecruiterBadge recruiter={recruiter} detail={interviewTitle(interview, t)} />}
+        title={t.debrief.title}
+      />
 
       <DebriefDetails debrief={debrief} totalQuestions={interview.totalQuestions} recruiter={recruiter} />
 
       <footer className="page-footer">
-        <button type="button" className="primary-button" onClick={onDone}>
-          <PlusIcon />
+        <Button variant="primary" icon={<PlusIcon />} onClick={onDone}>
           {t.common.newInterview}
-        </button>
+        </Button>
       </footer>
     </main>
   );
@@ -45,12 +45,12 @@ export function DebriefDetails({ debrief, totalQuestions, recruiter }: DebriefDe
 
   return (
     <>
-      {debrief.endedEarly && answered > 0 && <p className="banner">{t.debrief.endedEarly(answered, totalQuestions)}</p>}
+      {debrief.endedEarly && answered > 0 && <Banner>{t.debrief.endedEarly(answered, totalQuestions)}</Banner>}
       {debrief.summary && (
         <figure className="debrief-summary">
           <Avatar recruiter={recruiter} />
           <div>
-            <figcaption className="eyebrow">{t.recruiter.debriefFrom(recruiter.name)}</figcaption>
+            <figcaption className="debrief-summary-label">{t.recruiter.debriefFrom(recruiter.name)}</figcaption>
             <blockquote>
               <p>{debrief.summary}</p>
             </blockquote>
@@ -59,7 +59,7 @@ export function DebriefDetails({ debrief, totalQuestions, recruiter }: DebriefDe
       )}
 
       {answered === 0 ? (
-        <p className="banner">{t.debrief.nothingAnswered}</p>
+        <Banner>{t.debrief.nothingAnswered}</Banner>
       ) : (
         <ol className="debrief-questions">
           {debrief.questions.map((question) => (
@@ -74,8 +74,8 @@ export function DebriefDetails({ debrief, totalQuestions, recruiter }: DebriefDe
 function QuestionFeedback({ question }: { question: DebriefQuestion }) {
   const { t } = useI18n();
   return (
-    <li className="card feedback">
-      <p className="eyebrow feedback-theme">
+    <li className="ui-card feedback">
+      <p className="feedback-theme">
         {t.common.question(question.number)} · {question.theme}
         {question.uncurated && <span className="uncurated-badge">{t.common.uncurated}</span>}
       </p>
