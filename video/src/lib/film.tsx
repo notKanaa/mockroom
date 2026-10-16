@@ -17,6 +17,8 @@ export interface FilmProps extends Record<string, unknown> {
   locale: Locale;
   /** The frame's shape. 16:9 is the finished cut; 9:16 and 1:1 are laid out for ads. */
   aspect: Aspect;
+  /** Leaves the film grain out, so a GIF stays small. */
+  lite?: boolean;
 }
 
 const FilmContext = createContext<FilmProps>({ locale: "en", aspect: "16:9" });
@@ -33,11 +35,12 @@ export interface Film extends LocaleContent {
   u: number;
   portrait: boolean;
   square: boolean;
+  lite: boolean;
 }
 
 /** The film's copy, sample interview and layout for the current composition. */
 export function useFilm(): Film {
-  const { locale, aspect } = useContext(FilmContext);
+  const { locale, aspect, lite = false } = useContext(FilmContext);
   const { width, height } = useVideoConfig();
   return {
     ...locales[locale],
@@ -47,5 +50,6 @@ export function useFilm(): Film {
     u: Math.min(width, height) / 1080,
     portrait: aspect === "9:16",
     square: aspect === "1:1",
+    lite,
   };
 }

@@ -5,6 +5,7 @@
 import { noise2D } from "@remotion/noise";
 import type { CSSProperties, ReactNode } from "react";
 import { AbsoluteFill, spring, useCurrentFrame, useVideoConfig } from "remotion";
+import { useFilm } from "../lib/film";
 
 export type SpringConfig = { damping?: number; stiffness?: number; mass?: number; overshootClamping?: boolean };
 
@@ -47,6 +48,8 @@ export function rgbSplit(amount: number): CSSProperties {
 /** Film grain over everything: moving noise, very light. */
 export function Grain({ opacity = 0.07 }: { opacity?: number }) {
   const frame = useCurrentFrame();
+  const film = useFilm();
+  if (film.lite) return null;
   return (
     <AbsoluteFill style={{ pointerEvents: "none", mixBlendMode: "overlay", opacity }}>
       <svg width="100%" height="100%">

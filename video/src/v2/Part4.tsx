@@ -17,42 +17,9 @@ import { fonts } from "../theme/fonts";
 import { stage } from "../theme/tokens";
 import { Mesh } from "./Analysis";
 import { Bloom, BlurWords, Grain, useSpring, Vignette } from "./fx";
-import { SoundTrack, type SoundCue } from "./sound";
-
-export const PART4_FRAMES = 270;
-
-/** Part 4's beats, in frames at 30 fps. */
-export const p4 = {
-  summary: 6,
-  caption: 10,
-  cards: [40, 150],
-  /** Inside a card, from its start: the columns, each point, the model answer. */
-  columns: 16,
-  points: 26,
-  pointGap: 6,
-  model: 56,
-  collapse: 212,
-  file: 222,
-  dark: 238,
-  darkFrames: 24,
-};
-
-export const part4Sound: SoundCue[] = [
-  { sound: "groove", frame: 0, volume: 0.85, until: p4.dark },
-  { sound: "free-chime", frame: p4.summary, volume: 0.8 },
-  { sound: "shimmer", frame: p4.summary, volume: 0.35 },
-  ...p4.cards.flatMap((at, index) => [
-    { sound: "whoosh-in", frame: at - 4, volume: 0.5, rate: 1 + index * 0.1 },
-    { sound: "flip", frame: at + p4.columns, volume: 0.5 },
-    { sound: "flip", frame: at + p4.columns + 3, volume: 0.45, rate: 1.15 },
-    ...[0, 1, 2, 3].map((point) => ({ sound: "pops", frame: at + p4.points + point * p4.pointGap, volume: 0.3, rate: 1 + point * 0.07 })),
-    { sound: "mark", frame: at + p4.model, volume: 0.45 },
-  ]),
-  { sound: "collapse", frame: p4.collapse - 4, volume: 0.6 },
-  { sound: "chip-land", frame: p4.file + 6, volume: 0.65, rate: 0.8 },
-  { sound: "dive", frame: p4.dark - 4, volume: 0.6 },
-  { sound: "drone-dark", frame: p4.dark, volume: 0.3, until: PART4_FRAMES + 30 },
-];
+import { p4 } from "./beats";
+import { part4Sound } from "./cues";
+import { SoundTrack } from "./sound";
 
 export function Part4Composition(props: FilmProps) {
   return (
@@ -308,31 +275,37 @@ function FileChip() {
   const frame = useCurrentFrame();
   const film = useFilm();
   const sp = useSpring();
-  const { u, width, height } = film;
+  const { u, height } = film;
   if (frame < p4.file) return null;
   const pop = sp(frame, p4.file, { damping: 11, stiffness: 180 });
   const drop = progress(frame, p4.dark, p4.darkFrames, Easing.bezier(0.5, 0, 0.3, 1));
   const night = progress(frame, p4.dark + 12, 10);
-  const background = interpolateColors(night, [0, 1], ["#ffffff", stage.surface]);
-  const color = interpolateColors(night, [0, 1], [stage.paperText, stage.text]);
+  return <FilePill y={height / 2 + mix(0, 90, drop) * u} scale={pop} night={night} opacity={Math.min(1, pop * 2)} />;
+}
+
+/** The file as a pill: light on the mesh, dark (`night` 1) once the frame has gone dark. Part 5 picks it up there. */
+export function FilePill({ y, scale, night, opacity, blur = 0 }: { y: number; scale: number; night: number; opacity: number; blur?: number }) {
+  const film = useFilm();
+  const { u, width } = film;
   return (
     <div
       style={{
         position: "absolute",
         left: width / 2,
-        top: height / 2 + mix(0, 90, drop) * u,
-        transform: `translate(-50%, -50%) scale(${pop})`,
+        top: y,
+        transform: `translate(-50%, -50%) scale(${scale})`,
         display: "flex",
         alignItems: "center",
         gap: 16 * u,
         padding: `${18 * u}px ${30 * u}px`,
         borderRadius: 999,
-        background,
-        color,
+        background: interpolateColors(night, [0, 1], ["#ffffff", stage.surface]),
+        color: interpolateColors(night, [0, 1], [stage.paperText, stage.text]),
         fontFamily: fonts.mono,
         fontSize: 30 * u,
         boxShadow: `0 ${20 * u}px ${50 * u}px rgb(0 0 0 / ${0.15 + night * 0.35}), 0 0 ${40 * u * night}px rgb(53 196 168 / ${0.3 * night})`,
-        opacity: Math.min(1, pop * 2),
+        opacity,
+        filter: blur > 0 ? `blur(${blur}px)` : undefined,
         whiteSpace: "nowrap",
       }}
     >

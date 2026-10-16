@@ -19,38 +19,10 @@ import { easeIn, easeInOut, easeOut, mix, progress, typed } from "../lib/motion"
 import { fonts } from "../theme/fonts";
 import { stage } from "../theme/tokens";
 import { Bloom, BlurWords, Grain, impulse, Letters, Streak, useSpring, Vignette } from "./fx";
-import { SoundTrack, type SoundCue } from "./sound";
-
-export const PART5_FRAMES = 450;
-
-/** Part 5's beats, in frames at 30 fps (120 BPM: a beat every 15 frames). */
-export const p5 = {
-  title: 4,
-  titleUp: 30,
-  cards: 40,
-  pick: [86, 150, 162, 180],
-  byok: 84,
-  key: 100,
-  test: 128,
-  connected: 136,
-  ollamaLine: 180,
-  ollama: 186,
-  implode: 244,
-  implodeFrames: 16,
-  pill: 256,
-  noAccount: 250,
-  terminal: 290,
-  terminalFrames: 16,
-  typing: 312,
-  enter: 338,
-  knock: 342,
-  mark: 350,
-  name: 356,
-  tagline: 378,
-  footer: 396,
-  license: 408,
-  out: 436,
-};
+import { p5, PART5_FRAMES } from "./beats";
+import { FilePill } from "./Part4";
+import { part5Sound } from "./cues";
+import { SoundTrack } from "./sound";
 
 const providers = [
   { id: "openai", label: "OpenAI", key: "sk-proj-", tail: "3f9a", model: "gpt-5-mini" },
@@ -58,37 +30,6 @@ const providers = [
   { id: "gemini", label: "Gemini", key: "AIza", tail: "c2Xe", model: "gemini-flash" },
   { id: "ollama", label: "Ollama", key: "", tail: "", model: "llama3.2" },
 ] as const;
-
-export const part5Sound: SoundCue[] = [
-  { sound: "groove", frame: p5.cards - 6, volume: 0.8, until: p5.implode + 8 },
-  { sound: "slam", frame: p5.title + 2, volume: 0.8 },
-  { sound: "whoosh-in", frame: p5.titleUp - 2, volume: 0.45 },
-  ...[0, 1, 2, 3].map((index) => ({ sound: "flip", frame: p5.cards + index * 3, volume: 0.45, rate: 1 + index * 0.06 })),
-  ...p5.pick.map((frame, index) => ({ sound: "toggle", frame, volume: 0.6, rate: 1 + index * 0.05 })),
-  { sound: "swipe-small", frame: p5.key - 4, volume: 0.4 },
-  { sound: "typing", frame: p5.key, volume: 0.45, rate: 1.4 },
-  { sound: "click", frame: p5.test, volume: 0.7 },
-  { sound: "free-chime", frame: p5.connected, volume: 0.6 },
-  { sound: "typing", frame: p5.pick[1]! + 2, volume: 0.3, rate: 1.7 },
-  { sound: "typing", frame: p5.pick[2]! + 2, volume: 0.3, rate: 1.8 },
-  { sound: "dock", frame: p5.ollama, volume: 0.6 },
-  { sound: "pops", frame: p5.ollama + 14, volume: 0.45 },
-  { sound: "collapse", frame: p5.implode - 4, volume: 0.65 },
-  { sound: "ring-pop", frame: p5.pill, volume: 0.6 },
-  { sound: "drone-dark", frame: p5.implode, volume: 0.22, until: p5.enter },
-  { sound: "expand", frame: p5.terminal - 2, volume: 0.5 },
-  { sound: "typing", frame: p5.typing, volume: 0.5, rate: 0.9 },
-  { sound: "click", frame: p5.enter, volume: 0.8 },
-  { sound: "slam", frame: p5.enter + 1, volume: 0.55 },
-  { sound: "whip", frame: p5.knock - 2, volume: 0.6 },
-  { sound: "dock", frame: p5.mark + 8, volume: 0.75 },
-  { sound: "letters", frame: p5.name, volume: 0.4 },
-  { sound: "sting", frame: p5.name + 4, volume: 0.85 },
-  { sound: "pad-light", frame: p5.mark, volume: 0.7 },
-  { sound: "shimmer", frame: p5.tagline, volume: 0.35 },
-  { sound: "pops", frame: p5.footer, volume: 0.4, rate: 0.9 },
-  { sound: "toggle", frame: p5.license, volume: 0.3 },
-];
 
 export function Part5Composition(props: FilmProps) {
   return (
@@ -183,6 +124,16 @@ function Scene() {
   const copy = film.film.privacy;
   return (
     <AbsoluteFill>
+      {/* Part 4's file, picked up where it was left, knocked away as the title slams in. */}
+      {frame < p5.title + 12 && (
+        <FilePill
+          y={height / 2 + 90 * u - progress(frame, p5.title, 10, easeIn) * 260 * u}
+          scale={1 - progress(frame, p5.title, 10, easeIn) * 0.5}
+          night={1}
+          opacity={1 - progress(frame, p5.title + 2, 8)}
+          blur={progress(frame, p5.title, 10) * 12 * u}
+        />
+      )}
       <Title />
       {/* The caption under the title changes with each step. */}
       <div

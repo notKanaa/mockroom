@@ -13,9 +13,9 @@ import { easeIn, easeInOut, easeOut, mix, progress } from "../lib/motion";
 import { fonts } from "../theme/fonts";
 import { stage } from "../theme/tokens";
 import { p1 } from "./beats";
-import { part1Sound, SoundTrack } from "./sound";
+import { part1Sound } from "./cues";
+import { SoundTrack } from "./sound";
 import { At, Bloom, bump, Grain, impulse, Letters, rgbSplit, scatter, shake, Streak, useSpring, Vignette } from "./fx";
-
 
 /** Fast moves get a camera shutter: a few sub-frames blended, as on film. */
 function Blur({ on, children }: { on: boolean; children: ReactNode }) {

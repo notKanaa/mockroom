@@ -22,12 +22,8 @@ export interface FilmCopy {
   answer: { name: string; claims: string[] };
   demo: { paste: string; reads: string; interviews: string; digs: string; debrief: string };
   privacy: {
-    lines: string[];
     local: string;
     ollama: string;
-    providers: string[];
-    inside: string[];
-    /** Part 5 of the v2 film. */
     title: string;
     byok: string;
     keyNote: string;
@@ -84,11 +80,8 @@ const en: LocaleContent = {
       debrief: "Then tells you exactly what to review.",
     },
     privacy: {
-      lines: ["Your key.", "Your machine.", "No account. History stays local."],
       local: "127.0.0.1",
       ollama: "Or free and offline, with Ollama.",
-      providers: ["OpenAI", "Anthropic", "Gemini"],
-      inside: ["settings.json", "interviews/"],
       title: "Pick your AI.",
       byok: "Bring your own API key.",
       keyNote: "It stays on your machine, and only goes to its provider.",
@@ -170,11 +163,8 @@ const fr: LocaleContent = {
       debrief: "Puis te dit précisément quoi réviser.",
     },
     privacy: {
-      lines: ["Ta clé.", "Ta machine.", "Pas de compte. L'historique reste chez toi."],
       local: "127.0.0.1",
       ollama: "Ou gratuit et hors ligne, avec Ollama.",
-      providers: ["OpenAI", "Anthropic", "Gemini"],
-      inside: ["settings.json", "interviews/"],
       title: "Choisis ton IA.",
       byok: "Utilise ta propre clé d'API.",
       keyNote: "Elle reste sur ta machine, et ne part que chez son fournisseur.",

@@ -66,6 +66,32 @@ function tick(frequency: number, seed: number, length = 0.03): Float32Array {
   return tone.map((value, index) => value * 0.6 + click[index]! * 0.8);
 }
 
+/** A light 120 BPM groove: soft kick, off-beat hats, a plucked bass, a chord stab per bar. */
+function grooveOf(beats: number): Sound {
+    const beat = 0.5;
+    const length = beats * beat + 1;
+    const sound = silence(length);
+    const bass = [36, 36, 43, 45];
+    for (let index = 0; index < beats; index++) {
+      const at = index * beat;
+      const bar = Math.floor(index / 4);
+      add(sound, boom(70, 44, 0.09, 0.05, 300 + index), at, 0.55);
+      add(sound, shape(filter(noise(0.08, 400 + index), "hp", () => 7000), hit(0.001, 0.018)), at + beat / 2, 0.22, index % 2 ? 0.3 : -0.3);
+      if (index % 2 === 1) add(sound, shape(filter(noise(0.05, 500 + index), "hp", () => 9000), hit(0.001, 0.01)), at + beat * 0.75, 0.1, 0.5);
+      const root = note(bass[bar % 4]!);
+      add(sound, shape(filter(osc(0.4, () => root, "saw"), "lp", (t) => 300 + 1600 * Math.exp(-t / 0.05), 1.2), hit(0.004, 0.16)), at, 0.32);
+      if (index % 4 === 0) {
+        const chord = [60, 64, 67, 71].map((midi) => midi + (bass[bar % 4]! - 36));
+        chord.forEach((midi, voice) => add(sound, mallet(note(midi), 0.3), at + voice * 0.012, 0.12, voice % 2 ? 0.35 : -0.35));
+      }
+    }
+    // Fades in over the first beat, and out at the end.
+    const fade = (index: number, total: number) => Math.min(1, index / 48000 / 0.4) * Math.min(1, (total - index) / 48000 / 0.8);
+    sound.left = sound.left.map((value, index) => value * fade(index, sound.left.length));
+    sound.right = sound.right.map((value, index) => value * fade(index, sound.right.length));
+    return master(sound, -3);
+  }
+
 export const sounds: Record<string, () => Sound> = {
   // The ring appears: a round, soft bloop with a sub underneath.
   "ring-pop": () => {
@@ -289,32 +315,11 @@ export const sounds: Record<string, () => Sound> = {
 
   // Part 2
 
-  // A light 120 BPM groove under the product part: soft kick, off-beat hats, a plucked bass, a chord stab per bar.
-  groove: () => {
-    const beat = 0.5;
-    const beats = 22;
-    const length = beats * beat + 1;
-    const sound = silence(length);
-    const bass = [36, 36, 43, 45];
-    for (let index = 0; index < beats; index++) {
-      const at = index * beat;
-      const bar = Math.floor(index / 4);
-      add(sound, boom(70, 44, 0.09, 0.05, 300 + index), at, 0.55);
-      add(sound, shape(filter(noise(0.08, 400 + index), "hp", () => 7000), hit(0.001, 0.018)), at + beat / 2, 0.22, index % 2 ? 0.3 : -0.3);
-      if (index % 2 === 1) add(sound, shape(filter(noise(0.05, 500 + index), "hp", () => 9000), hit(0.001, 0.01)), at + beat * 0.75, 0.1, 0.5);
-      const root = note(bass[bar % 4]!);
-      add(sound, shape(filter(osc(0.4, () => root, "saw"), "lp", (t) => 300 + 1600 * Math.exp(-t / 0.05), 1.2), hit(0.004, 0.16)), at, 0.32);
-      if (index % 4 === 0) {
-        const chord = [60, 64, 67, 71].map((midi) => midi + (bass[bar % 4]! - 36));
-        chord.forEach((midi, voice) => add(sound, mallet(note(midi), 0.3), at + voice * 0.012, 0.12, voice % 2 ? 0.35 : -0.35));
-      }
-    }
-    // Fades in over the first beat, and out at the end.
-    const fade = (index: number, total: number) => Math.min(1, index / 48000 / 0.4) * Math.min(1, (total - index) / 48000 / 0.8);
-    sound.left = sound.left.map((value, index) => value * fade(index, sound.left.length));
-    sound.right = sound.right.map((value, index) => value * fade(index, sound.right.length));
-    return master(sound, -3);
-  },
+  // A light 120 BPM groove under the product part (see grooveOf).
+  groove: () => grooveOf(22),
+
+  // The same groove, long enough to run under parts 2 to 4 of the assembled film without restarting.
+  "groove-long": () => grooveOf(64),
 
   // The price lands on $0: two bright notes up, a little win.
   "free-chime": () => {
@@ -349,23 +354,6 @@ export const sounds: Record<string, () => Sound> = {
     const sound = whoosh(0.8, 250, 4200, 0, 0, 630, 0.75);
     add(sound, shape(osc(0.8, (t) => 300 * (900 / 300) ** (t / 0.8)), swell(0.8, 0.8, 2)), 0, 0.12);
     return master(sound, -2);
-  },
-
-  // A sheet of paper flying in.
-  "paper-fly": () => {
-    const length = 1;
-    const sound = whoosh(length, 700, 2400, 1, 0, 640, 0.7);
-    const flutter = shape(filter(noise(length, 641), "hp", () => 3000), (t) => swell(length, 0.7, 2)(t) * (0.5 + 0.5 * Math.sin(t * 90)));
-    add(sound, flutter, 0, 0.35, (t) => 1 - t);
-    return master(sound, -3);
-  },
-
-  // The sheet landing: a soft slap.
-  "paper-land": () => {
-    const sound = silence(0.5);
-    add(sound, shape(filter(noise(0.2, 650), "bp", () => 900, 0.8), hit(0.001, 0.04)), 0, 1);
-    add(sound, boom(120, 70, 0.05, 0.1, 651), 0, 0.5);
-    return master(sound, -3);
   },
 
   // A mouse click.

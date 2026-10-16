@@ -1,6 +1,9 @@
 // The beats of each part of the film, in frames at 30 fps. The pictures move on
 // them and the sounds hit on them.
 
+import type { Film } from "../lib/film";
+import { framesFor } from "../lib/motion";
+
 export const PART1_FRAMES = 300;
 
 /** Every beat of the opening, in frames at 30 fps. */
@@ -64,4 +67,93 @@ export const p2 = {
   start: 318,
   burst: 321,
   burstFrames: 18,
+};
+
+export const PART3_FRAMES = 300;
+
+
+/** Characters a frame: the recruiter's text streaming in, and the candidate typing. */
+export const STREAM = 2.6;
+export const TYPE = 3;
+
+
+/** Part 3's beats; the interview's follow the length of its texts, so French fits too. */
+export function part3Beats(sample: Pick<Film["sample"], "question" | "answer" | "followUp">) {
+  const question = 58;
+  const typing = question + framesFor(sample.question, STREAM) + 10;
+  const send = typing + framesFor(sample.answer, TYPE) + 4;
+  const followUp = send + 32;
+  return {
+    iris: 0,
+    irisFrames: 16,
+    letter: 12,
+    travel: 18,
+    travelFrames: 20,
+    header: 24,
+    caption1: 30,
+    thinking: 40,
+    question,
+    questionEnd: question + framesFor(sample.question, STREAM),
+    typing,
+    send,
+    thinking2: send + 8,
+    progress: followUp - 8,
+    caption2: followUp - 4,
+    followUp,
+    followUpEnd: followUp + framesFor(sample.followUp, STREAM),
+    exit: 268,
+  };
+}
+
+export type Beats = ReturnType<typeof part3Beats>;
+
+export const PART4_FRAMES = 270;
+
+
+/** Part 4's beats, in frames at 30 fps. */
+export const p4 = {
+  summary: 6,
+  caption: 10,
+  cards: [40, 150],
+  /** Inside a card, from its start: the columns, each point, the model answer. */
+  columns: 16,
+  points: 26,
+  pointGap: 6,
+  model: 56,
+  collapse: 212,
+  file: 222,
+  dark: 238,
+  darkFrames: 24,
+};
+
+export const PART5_FRAMES = 450;
+
+
+/** Part 5's beats, in frames at 30 fps (120 BPM: a beat every 15 frames). */
+export const p5 = {
+  title: 4,
+  titleUp: 30,
+  cards: 40,
+  pick: [86, 150, 162, 180],
+  byok: 84,
+  key: 100,
+  test: 128,
+  connected: 136,
+  ollamaLine: 180,
+  ollama: 186,
+  implode: 244,
+  implodeFrames: 16,
+  pill: 256,
+  noAccount: 250,
+  terminal: 290,
+  terminalFrames: 16,
+  typing: 312,
+  enter: 338,
+  knock: 342,
+  mark: 350,
+  name: 356,
+  tagline: 378,
+  footer: 396,
+  license: 408,
+  out: 436,
 };

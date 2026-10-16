@@ -16,7 +16,8 @@ import { stage } from "../theme/tokens";
 import { Analysis, Mesh } from "./Analysis";
 import { p2 } from "./beats";
 import { At, Bloom, Grain, impulse, Letters, useSpring, Vignette } from "./fx";
-import { part2Sound, SoundTrack } from "./sound";
+import { part2Sound } from "./cues";
+import { SoundTrack } from "./sound";
 
 export function Part2Composition(props: FilmProps) {
   return (

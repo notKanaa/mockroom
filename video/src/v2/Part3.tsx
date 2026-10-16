@@ -13,71 +13,15 @@ import { IconButton } from "../../../src/ui/kit";
 import { Avatar } from "../../../src/ui/Recruiter";
 import { UiViewport, centre, type Anchors, type Camera } from "../components/UiViewport";
 import { FilmProvider, useFilm, type Film, type FilmProps } from "../lib/film";
-import { easeIn, easeOut, framesFor, keyframes, mix, progress, streamed, typed } from "../lib/motion";
+import { easeIn, easeOut, keyframes, mix, progress, streamed, typed } from "../lib/motion";
 import { fonts } from "../theme/fonts";
 import { stage } from "../theme/tokens";
 import { interviewLanguageName, ModelButton } from "../ui/Screens";
 import { Mesh } from "./Analysis";
 import { Bloom, BlurWords, Grain, impulse, useSpring, Vignette } from "./fx";
-import { SoundTrack, type SoundCue } from "./sound";
-
-export const PART3_FRAMES = 300;
-
-const STREAM = 2.6;
-const TYPE = 3;
-
-/** Part 3's beats; the interview's follow the length of its texts, so French fits too. */
-export function part3Beats(sample: Film["sample"]) {
-  const question = 58;
-  const typing = question + framesFor(sample.question, STREAM) + 10;
-  const send = typing + framesFor(sample.answer, TYPE) + 4;
-  const followUp = send + 32;
-  return {
-    iris: 0,
-    irisFrames: 16,
-    letter: 12,
-    travel: 18,
-    travelFrames: 20,
-    header: 24,
-    caption1: 30,
-    thinking: 40,
-    question,
-    questionEnd: question + framesFor(sample.question, STREAM),
-    typing,
-    send,
-    thinking2: send + 8,
-    progress: followUp - 8,
-    caption2: followUp - 4,
-    followUp,
-    followUpEnd: followUp + framesFor(sample.followUp, STREAM),
-    exit: 268,
-  };
-}
-
-type Beats = ReturnType<typeof part3Beats>;
-
-export function part3Sound(beats: Beats): SoundCue[] {
-  const b = beats;
-  return [
-    { sound: "groove", frame: 0, volume: 0.85 },
-    { sound: "collapse", frame: b.iris, volume: 0.6 },
-    { sound: "ring-pop", frame: b.letter, volume: 0.55 },
-    { sound: "whoosh-in", frame: b.travel, volume: 0.5 },
-    { sound: "shimmer", frame: b.thinking, volume: 0.3 },
-    { sound: "typing", frame: b.question, volume: 0.22, rate: 1.8 },
-    { sound: "typing", frame: b.typing, volume: 0.4, rate: 1.3 },
-    { sound: "typing", frame: b.typing + 20, volume: 0.35, rate: 1.45 },
-    { sound: "click", frame: b.send - 2, volume: 0.6 },
-    { sound: "chip-fly", frame: b.send, volume: 0.5, rate: 0.85 },
-    { sound: "chip-land", frame: b.send + 10, volume: 0.5, rate: 0.9 },
-    { sound: "shimmer", frame: b.thinking2, volume: 0.25 },
-    { sound: "toggle", frame: b.progress, volume: 0.6 },
-    { sound: "mark", frame: b.followUp, volume: 0.65, rate: 0.9 },
-    { sound: "free-chime", frame: b.followUp + 2, volume: 0.35 },
-    { sound: "typing", frame: b.followUp + 4, volume: 0.22, rate: 1.8 },
-    { sound: "swap", frame: b.exit, volume: 0.55 },
-  ];
-}
+import { part3Beats, STREAM, TYPE, type Beats } from "./beats";
+import { part3Sound } from "./cues";
+import { SoundTrack } from "./sound";
 
 export function Part3Composition(props: FilmProps) {
   return (

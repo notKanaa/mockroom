@@ -1,133 +1,97 @@
 // Every composition Remotion Studio lists and `remotion render` can render.
 
 import { Composition, Folder } from "remotion";
-import { Promo, SceneOnly, type PromoProps } from "./compositions/Promo";
-import { LOOP_FRAMES, LOOP_SIZE, ReadmeLoop, type LoopProps } from "./compositions/ReadmeLoop";
 import { formats, type FilmProps } from "./lib/film";
-import { PART1_FRAMES, PART2_FRAMES } from "./v2/beats";
+import { PART1_FRAMES, PART2_FRAMES, PART3_FRAMES, PART4_FRAMES, PART5_FRAMES } from "./v2/beats";
+import { FILM_FRAMES, FilmComposition } from "./v2/Film";
+import { LOOP_FRAMES, LOOP_SIZE, LoopComposition } from "./v2/Loop";
 import { Part1Composition } from "./v2/Part1";
 import { Part2Composition } from "./v2/Part2";
-import { PART3_FRAMES, Part3Composition } from "./v2/Part3";
-import { PART4_FRAMES, Part4Composition } from "./v2/Part4";
-import { PART5_FRAMES, Part5Composition } from "./v2/Part5";
-import { FPS, PROMO_FRAMES, scenes, type SceneId } from "./timeline";
+import { Part3Composition } from "./v2/Part3";
+import { Part4Composition } from "./v2/Part4";
+import { Part5Composition } from "./v2/Part5";
+
+const FPS = 30;
 
 /** The frame's size follows the `aspect` prop, so one composition renders every shape. */
 const sizeFromAspect = ({ props }: { props: FilmProps }) => formats[props.aspect];
 
+const film = (locale: FilmProps["locale"], aspect: FilmProps["aspect"]): FilmProps => ({ locale, aspect });
+
+const parts = [
+  { id: "Part1-Opening", component: Part1Composition, frames: PART1_FRAMES },
+  { id: "Part2-Product", component: Part2Composition, frames: PART2_FRAMES },
+  { id: "Part3-Interview", component: Part3Composition, frames: PART3_FRAMES },
+  { id: "Part4-Debrief", component: Part4Composition, frames: PART4_FRAMES },
+  { id: "Part5-YourAI", component: Part5Composition, frames: PART5_FRAMES },
+];
+
 export function Root() {
   return (
     <>
-      <Folder name="Promo">
-        <Composition
-          id="Promo"
-          component={Promo}
-          durationInFrames={PROMO_FRAMES}
-          fps={FPS}
-          {...formats["16:9"]}
-          defaultProps={{ locale: "en", aspect: "16:9", voiceOver: false } satisfies PromoProps}
-          calculateMetadata={sizeFromAspect}
-        />
-        <Composition
-          id="Promo-FR"
-          component={Promo}
-          durationInFrames={PROMO_FRAMES}
-          fps={FPS}
-          {...formats["16:9"]}
-          defaultProps={{ locale: "fr", aspect: "16:9", voiceOver: false } satisfies PromoProps}
-          calculateMetadata={sizeFromAspect}
-        />
-        <Composition
-          id="Promo-Vertical"
-          component={Promo}
-          durationInFrames={PROMO_FRAMES}
-          fps={FPS}
-          {...formats["9:16"]}
-          defaultProps={{ locale: "en", aspect: "9:16", voiceOver: false } satisfies PromoProps}
-          calculateMetadata={sizeFromAspect}
-        />
-        <Composition
-          id="Promo-Square"
-          component={Promo}
-          durationInFrames={PROMO_FRAMES}
-          fps={FPS}
-          {...formats["1:1"]}
-          defaultProps={{ locale: "en", aspect: "1:1", voiceOver: false } satisfies PromoProps}
-          calculateMetadata={sizeFromAspect}
-        />
-      </Folder>
-
-      <Folder name="V2">
-        <Composition
-          id="V2-Part1"
-          component={Part1Composition}
-          durationInFrames={PART1_FRAMES}
-          fps={FPS}
-          {...formats["16:9"]}
-          defaultProps={{ locale: "en", aspect: "16:9" } satisfies FilmProps}
-          calculateMetadata={sizeFromAspect}
-        />
-        <Composition
-          id="V2-Part2"
-          component={Part2Composition}
-          durationInFrames={PART2_FRAMES}
-          fps={FPS}
-          {...formats["16:9"]}
-          defaultProps={{ locale: "en", aspect: "16:9" } satisfies FilmProps}
-          calculateMetadata={sizeFromAspect}
-        />
-        <Composition
-          id="V2-Part3"
-          component={Part3Composition}
-          durationInFrames={PART3_FRAMES}
-          fps={FPS}
-          {...formats["16:9"]}
-          defaultProps={{ locale: "en", aspect: "16:9" } satisfies FilmProps}
-          calculateMetadata={sizeFromAspect}
-        />
-        <Composition
-          id="V2-Part4"
-          component={Part4Composition}
-          durationInFrames={PART4_FRAMES}
-          fps={FPS}
-          {...formats["16:9"]}
-          defaultProps={{ locale: "en", aspect: "16:9" } satisfies FilmProps}
-          calculateMetadata={sizeFromAspect}
-        />
-        <Composition
-          id="V2-Part5"
-          component={Part5Composition}
-          durationInFrames={PART5_FRAMES}
-          fps={FPS}
-          {...formats["16:9"]}
-          defaultProps={{ locale: "en", aspect: "16:9" } satisfies FilmProps}
-          calculateMetadata={sizeFromAspect}
-        />
-      </Folder>
-
+      <Composition
+        id="Film"
+        component={FilmComposition}
+        durationInFrames={FILM_FRAMES}
+        fps={FPS}
+        {...formats["16:9"]}
+        defaultProps={film("en", "16:9")}
+        calculateMetadata={sizeFromAspect}
+      />
+      <Composition
+        id="Film-FR"
+        component={FilmComposition}
+        durationInFrames={FILM_FRAMES}
+        fps={FPS}
+        {...formats["16:9"]}
+        defaultProps={film("fr", "16:9")}
+        calculateMetadata={sizeFromAspect}
+      />
       <Composition
         id="ReadmeLoop"
-        component={ReadmeLoop}
+        component={LoopComposition}
         durationInFrames={LOOP_FRAMES}
         fps={FPS}
         {...LOOP_SIZE}
-        defaultProps={{ locale: "en" } satisfies LoopProps}
+        defaultProps={film("en", "16:9")}
       />
 
-      {/* Each scene alone: the building blocks for ads. */}
-      <Folder name="Scenes">
-        {scenes.map((scene) => (
+      {/* Each part alone, with its own sound: to review, and to cut ads from. */}
+      <Folder name="Parts">
+        {parts.map((part) => (
           <Composition
-            key={scene.id}
-            id={`Scene-${scene.id}`}
-            component={SceneOnly}
-            durationInFrames={scene.duration}
+            key={part.id}
+            id={part.id}
+            component={part.component}
+            durationInFrames={part.frames}
             fps={FPS}
             {...formats["16:9"]}
-            defaultProps={{ locale: "en", aspect: "16:9", scene: scene.id as SceneId }}
+            defaultProps={film("en", "16:9")}
             calculateMetadata={sizeFromAspect}
           />
         ))}
+      </Folder>
+
+      {/* Other shapes, laid out but not polished yet: check them before using them in an ad. */}
+      <Folder name="Drafts">
+        <Composition
+          id="Film-Vertical"
+          component={FilmComposition}
+          durationInFrames={FILM_FRAMES}
+          fps={FPS}
+          {...formats["9:16"]}
+          defaultProps={film("en", "9:16")}
+          calculateMetadata={sizeFromAspect}
+        />
+        <Composition
+          id="Film-Square"
+          component={FilmComposition}
+          durationInFrames={FILM_FRAMES}
+          fps={FPS}
+          {...formats["1:1"]}
+          defaultProps={film("en", "1:1")}
+          calculateMetadata={sizeFromAspect}
+        />
       </Folder>
     </>
   );
