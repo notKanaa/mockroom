@@ -112,6 +112,7 @@ export function App() {
   } else if (screen.name === "saved") {
     content = (
       <SavedInterviewView
+        key={screen.interviewId}
         interviewId={screen.interviewId}
         onDeleted={() => {
           setHistoryVersion((version) => version + 1);
@@ -132,22 +133,21 @@ export function App() {
     );
   }
 
-  if (!showSidebar) {
-    return (
-      <div className="shell shell-focus">
-        {firstLaunch && (
-          <div className="corner-switches">
-            <ThemeSwitch />
-            <LanguageSwitch />
-          </div>
-        )}
-        {content}
-      </div>
-    );
-  }
+  // The sidebar stays in the page during focus mode, folded away, so it can slide out
+  // as the interview starts and back in once it is over.
+  const classes = ["shell"];
+  if (!showSidebar) classes.push("shell-focus");
+  else if (sidebarOpen) classes.push("sidebar-open");
+  if (showSidebar && drawerOpen) classes.push("drawer-open");
 
   return (
-    <div className={`shell${sidebarOpen ? " sidebar-open" : ""}${drawerOpen ? " drawer-open" : ""}`}>
+    <div className={classes.join(" ")}>
+      {firstLaunch && (
+        <div className="corner-switches">
+          <ThemeSwitch />
+          <LanguageSwitch />
+        </div>
+      )}
       <Sidebar
         openId={screen.name === "saved" ? screen.interviewId : null}
         version={historyVersion}
@@ -159,19 +159,22 @@ export function App() {
         onOpenSettings={() => go({ name: "settings", firstLaunch: false })}
         settingsOpen={screen.name === "settings"}
         onHide={() => setSidebar(false)}
+        hidden={!showSidebar}
       />
       <div className="scrim" onClick={() => setDrawerOpen(false)} aria-hidden="true" />
       <div className="main">
-        <div className="topbar">
-          <IconButton
-            className="sidebar-show"
-            label={t.sidebar.show}
-            icon={<SidebarIcon />}
-            onClick={() => setSidebar(true)}
-            aria-controls="sidebar"
-          />
-          <Brand />
-        </div>
+        {showSidebar && (
+          <div className="topbar">
+            <IconButton
+              className="sidebar-show"
+              label={t.sidebar.show}
+              icon={<SidebarIcon />}
+              onClick={() => setSidebar(true)}
+              aria-controls="sidebar"
+            />
+            <Brand />
+          </div>
+        )}
         {content}
       </div>
     </div>

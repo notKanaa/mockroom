@@ -1,7 +1,9 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
+import { flushSync } from "react-dom";
 import { useI18n } from "./i18n";
 import { MonitorIcon, MoonIcon, SunIcon } from "./Icons";
 import { Segmented } from "./kit";
+import { crossfade } from "./motion";
 
 /** The theme the candidate picked: the operating system's, or always light or dark. */
 export type ThemeChoice = "system" | "light" | "dark";
@@ -18,12 +20,20 @@ const ThemeContext = createContext<Theme | null>(null);
 
 /** Holds the theme choice, remembered on this computer, and applies it to the page. */
 export function ThemeProvider({ children }: { children: ReactNode }) {
-  const [choice, setChoice] = useState<ThemeChoice>(initialChoice);
+  const [choice, setStoredChoice] = useState<ThemeChoice>(initialChoice);
+
+  // The page crossfades into the new theme instead of flipping all at once.
+  const setChoice = (next: ThemeChoice) => {
+    if (next === choice) return;
+    crossfade(() => {
+      applyTheme(next);
+      // The switch shows the new choice in the new look too.
+      flushSync(() => setStoredChoice(next));
+    });
+  };
 
   useEffect(() => {
-    // Without the attribute, the CSS follows the operating system.
-    if (choice === "system") delete document.documentElement.dataset.theme;
-    else document.documentElement.dataset.theme = choice;
+    applyTheme(choice);
     try {
       if (choice === "system") localStorage.removeItem(storageKey);
       else localStorage.setItem(storageKey, choice);
@@ -52,6 +62,12 @@ export function ThemeSwitch() {
       ]}
     />
   );
+}
+
+function applyTheme(choice: ThemeChoice) {
+  // Without the attribute, the CSS follows the operating system.
+  if (choice === "system") delete document.documentElement.dataset.theme;
+  else document.documentElement.dataset.theme = choice;
 }
 
 function initialChoice(): ThemeChoice {

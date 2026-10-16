@@ -37,6 +37,15 @@
   --h-sm: 32px;
   --h-md: 40px;
 
+  /* Motion: calm and short. Things arrive with a gentle deceleration.
+     Mostly opacity and transform move, so the browser keeps it at 60fps. */
+  --ease-out: cubic-bezier(0.2, 0, 0, 1);
+  --t-fast: 120ms; /* hover and press */
+  --t-base: 200ms; /* small UI changes */
+  --t-slow: 320ms; /* things arriving */
+  --t-enter: 480ms; /* a whole screen arriving */
+  --stagger: 60ms;
+
   --sidebar-width: 264px;
   --content-width: 720px;
   --font: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
@@ -194,6 +203,35 @@ input[type="radio"] {
   accent-color: var(--accent);
 }
 
+/* Motion: the few ways things arrive. Each screen picks from these. */
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(var(--s2));
+  }
+}
+
+@keyframes drop {
+  from {
+    opacity: 0;
+    transform: translateY(calc(var(--s2) * -1));
+  }
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+}
+
+/* Changing the theme crossfades the whole page (theme.tsx). */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: var(--t-slow);
+  animation-timing-function: ease;
+}
+
 .visually-hidden {
   position: absolute;
   width: 1px;
@@ -219,8 +257,20 @@ input[type="radio"] {
   font-weight: 600;
   white-space: nowrap;
   transition:
-    background-color 0.12s,
-    border-color 0.12s;
+    background-color var(--t-fast),
+    border-color var(--t-fast),
+    color var(--t-fast),
+    opacity var(--t-base),
+    transform var(--t-fast) var(--ease-out);
+}
+
+/* Pressing a control sinks it slightly, so the click is felt. */
+.ui-button:active:not(:disabled),
+.ui-icon-button:active:not(:disabled),
+.chip:active:not(:disabled),
+.sidebar-row:active,
+.ui-segmented-option:active {
+  transform: scale(0.97);
 }
 
 .ui-button-md {
@@ -279,7 +329,11 @@ input[type="radio"] {
   display: inline-grid;
   place-items: center;
   flex: none;
-  transition: background-color 0.12s;
+  transition:
+    background-color var(--t-fast),
+    color var(--t-fast),
+    opacity var(--t-base),
+    transform var(--t-fast) var(--ease-out);
 }
 
 .ui-icon-button-ghost {
@@ -324,6 +378,11 @@ input[type="radio"] {
   color: var(--muted);
   font-size: var(--fs-xs);
   font-weight: 600;
+  transition:
+    background-color var(--t-base),
+    color var(--t-base),
+    box-shadow var(--t-base),
+    transform var(--t-fast) var(--ease-out);
 }
 
 .ui-segmented-option:hover {
@@ -403,6 +462,7 @@ input[type="radio"] {
   padding: var(--s3) var(--s4);
   border-radius: var(--r-md);
   font-size: var(--fs-sm);
+  animation: fade-in var(--t-base) var(--ease-out);
 }
 
 .ui-banner-note {
@@ -498,7 +558,6 @@ input[type="radio"] {
 
 /* Focus mode: exactly one screen tall; only the conversation scrolls. */
 .shell-focus {
-  display: block;
   height: 100vh;
   height: 100dvh;
   overflow: hidden;
@@ -525,6 +584,10 @@ html:has(.shell-focus .room) body {
   min-width: 0;
 }
 
+.shell-focus .main {
+  min-height: 0;
+}
+
 /* On a wide screen, the way to reopen the sidebar floats in the corner and takes no room. */
 .topbar {
   position: absolute;
@@ -535,7 +598,8 @@ html:has(.shell-focus .room) body {
   align-items: center;
   gap: var(--s2);
   opacity: 1;
-  transition: opacity 0.2s ease 0.1s;
+  transition: opacity var(--t-base) ease var(--t-fast);
+  animation: fade-in var(--t-slow) var(--ease-out);
 }
 
 .sidebar-open .topbar {
@@ -603,8 +667,9 @@ html:has(.shell-focus .room) body {
   overflow: hidden;
   border-right: 1px solid var(--line);
   background: var(--sidebar);
+  /* The width has to move so the page beside it makes room; what is inside only fades and slides. */
   transition:
-    width 0.25s cubic-bezier(0.2, 0, 0, 1),
+    width var(--t-slow) var(--ease-out),
     visibility 0s;
 }
 
@@ -613,9 +678,9 @@ html:has(.shell-focus .room) body {
   border-right-width: 0;
   visibility: hidden;
   transition:
-    width 0.25s cubic-bezier(0.2, 0, 0, 1),
-    border-right-width 0s 0.25s,
-    visibility 0s 0.25s;
+    width var(--t-slow) var(--ease-out),
+    border-right-width 0s var(--t-slow),
+    visibility 0s var(--t-slow);
 }
 
 .sidebar-inner {
@@ -624,6 +689,14 @@ html:has(.shell-focus .room) body {
   width: var(--sidebar-width);
   height: 100%;
   padding: var(--s3);
+  transition:
+    opacity var(--t-base) ease,
+    transform var(--t-slow) var(--ease-out);
+}
+
+.shell:not(.sidebar-open) .sidebar-inner {
+  opacity: 0;
+  transform: translateX(calc(var(--s4) * -1));
 }
 
 .sidebar-top {
@@ -646,6 +719,9 @@ html:has(.shell-focus .room) body {
   font-size: var(--fs-sm);
   font-weight: 600;
   text-align: left;
+  transition:
+    background-color var(--t-fast),
+    transform var(--t-fast) var(--ease-out);
 }
 
 .sidebar-row:hover,
@@ -688,6 +764,7 @@ html:has(.shell-focus .room) body {
   display: flex;
   align-items: center;
   border-radius: var(--r-sm);
+  transition: background-color var(--t-fast);
 }
 
 .history-item:hover,
@@ -725,6 +802,7 @@ html:has(.shell-focus .room) body {
 .history-delete {
   margin-right: var(--s1);
   opacity: 0;
+  transition: opacity var(--t-fast);
 }
 
 .history-item:hover .history-delete,
@@ -769,6 +847,26 @@ html:has(.shell-focus .room) body {
   text-align: center;
 }
 
+/* On arrival, the heading, the box and the chips rise into place one after the other. */
+.home-heading,
+.home-tagline,
+.prompt,
+.chips-section {
+  animation: rise var(--t-enter) var(--ease-out) backwards;
+}
+
+.home-tagline {
+  animation-delay: var(--stagger);
+}
+
+.prompt {
+  animation-delay: calc(var(--stagger) * 2);
+}
+
+.chips-section {
+  animation-delay: calc(var(--stagger) * 4);
+}
+
 .home-heading {
   font-size: var(--fs-2xl);
   font-weight: 600;
@@ -791,11 +889,35 @@ html:has(.shell-focus .room) body {
   background: var(--surface);
   box-shadow: var(--shadow-md);
   text-align: left;
-  transition: border-color 0.12s;
+  transition: border-color var(--t-base);
 }
 
-.prompt:focus-within {
+/* A soft ring of the accent colour glows in around the box being typed in. */
+.prompt,
+.composer {
+  position: relative;
+}
+
+.prompt::before,
+.composer::before {
+  content: "";
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  box-shadow: 0 0 0 4px var(--accent-soft);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--t-slow) var(--ease-out);
+}
+
+.prompt:focus-within,
+.composer:focus-within {
   border-color: var(--accent);
+}
+
+.prompt:focus-within::before,
+.composer:focus-within::before {
+  opacity: 1;
 }
 
 .prompt textarea,
@@ -921,7 +1043,7 @@ option {
   border-radius: var(--r-md);
   background: var(--surface);
   box-shadow: var(--shadow-md);
-  animation: dropdown-in 0.12s ease-out;
+  animation: dropdown-in var(--t-base) var(--ease-out);
 }
 
 .ui-dropdown-down {
@@ -1092,13 +1214,22 @@ option {
   font-size: var(--fs-sm);
   font-weight: 600;
   transition:
-    border-color 0.12s,
-    color 0.12s;
+    border-color var(--t-fast),
+    color var(--t-fast),
+    opacity var(--t-base),
+    transform var(--t-base) var(--ease-out);
 }
 
 button.chip:hover:not(:disabled) {
   border-color: var(--accent);
   color: var(--accent-text);
+}
+
+/* With a mouse, a chip lifts a little under the pointer. */
+@media (hover: hover) {
+  button.chip:hover:not(:disabled):not(:active) {
+    transform: translateY(-1px);
+  }
 }
 
 button.chip:disabled {
@@ -1148,6 +1279,10 @@ button.chip[aria-busy="true"] {
   width: min(var(--content-width), 100%);
   margin: 0 auto;
   padding: var(--s8) var(--s4) var(--s16);
+}
+
+.page > * {
+  animation: rise var(--t-slow) var(--ease-out) backwards;
 }
 
 .shell-focus .page {
@@ -1459,8 +1594,23 @@ button.chip[aria-busy="true"] {
 
 .room {
   display: flex;
+  flex: 1;
   flex-direction: column;
-  height: 100%;
+  min-height: 0;
+}
+
+/* Entering the interview: as the sidebar slides away, the recruiter comes in from the top,
+   then the conversation and the answer box settle. */
+.room-header {
+  animation: drop var(--t-enter) var(--ease-out) var(--t-fast) backwards;
+}
+
+.room-scroll {
+  animation: fade-in var(--t-enter) var(--ease-out) calc(var(--t-fast) + var(--stagger)) backwards;
+}
+
+.composer-dock {
+  animation: rise var(--t-enter) var(--ease-out) calc(var(--t-fast) + var(--stagger) * 2) backwards;
 }
 
 .room-header {
@@ -1481,6 +1631,12 @@ button.chip[aria-busy="true"] {
   font-size: var(--fs-sm);
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
+}
+
+/* Moving on to a question or a follow-up: the new progress line rises into place. */
+.room-progress-text {
+  display: inline-block;
+  animation: rise var(--t-slow) var(--ease-out);
 }
 
 .room-scroll {
@@ -1508,13 +1664,19 @@ button.chip[aria-busy="true"] {
 .message {
   display: flex;
   gap: var(--s3);
-  animation: message-in 0.25s ease-out;
+  animation: rise var(--t-slow) var(--ease-out);
 }
 
-@keyframes message-in {
+/* The candidate's bubble grows out of the answer box, below it. */
+.message-candidate {
+  transform-origin: bottom right;
+  animation-name: bubble-in;
+}
+
+@keyframes bubble-in {
   from {
     opacity: 0;
-    transform: translateY(6px);
+    transform: translateY(var(--s3)) scale(0.97);
   }
 }
 
@@ -1558,21 +1720,27 @@ button.chip[aria-busy="true"] {
   overflow-wrap: anywhere;
 }
 
+/* The first words fade in where "is thinking" was. */
+.message-interviewer .message-text {
+  animation: fade-in var(--t-base) ease;
+}
+
+/* A soft caret that breathes at the end of the text as it streams. */
 .streaming::after {
   content: "";
   display: inline-block;
-  width: 0.5em;
+  width: 0.45em;
   height: 1em;
   margin-left: 2px;
-  border-radius: 2px;
+  border-radius: 3px;
   background: var(--accent);
   vertical-align: text-bottom;
-  animation: blink 1s steps(2, start) infinite;
+  animation: caret 1.1s ease-in-out infinite;
 }
 
-@keyframes blink {
-  to {
-    visibility: hidden;
+@keyframes caret {
+  50% {
+    opacity: 0.25;
   }
 }
 
@@ -1580,6 +1748,8 @@ button.chip[aria-busy="true"] {
   display: flex;
   align-items: center;
   min-height: var(--s6);
+  /* A little late, so a quick reply doesn't flash it. */
+  animation: fade-in var(--t-slow) ease var(--t-base) backwards;
 }
 
 /* Placeholders in the shape of what is coming, gently pulsing. */
@@ -1626,6 +1796,7 @@ button.chip[aria-busy="true"] {
   flex-direction: column;
   gap: var(--s3);
   margin-top: var(--s6);
+  animation: rise var(--t-slow) var(--ease-out);
 }
 
 .room-writing {
@@ -1644,10 +1815,7 @@ button.chip[aria-busy="true"] {
   border-radius: var(--r-lg);
   background: var(--surface);
   box-shadow: var(--shadow-md);
-}
-
-.composer:focus-within {
-  border-color: var(--accent);
+  transition: border-color var(--t-base);
 }
 
 .composer textarea {
@@ -1702,6 +1870,35 @@ button.chip[aria-busy="true"] {
   margin: 0;
   padding: 0;
   list-style: none;
+  /* Its cards arrive one by one instead. */
+  animation: none;
+}
+
+/* The debrief is revealed card by card, quickly: the first five follow each other,
+   the rest come with the fifth. */
+.debrief-summary,
+.debrief-questions > li {
+  animation: rise var(--t-enter) var(--ease-out) calc(var(--stagger) * var(--i, 1) + var(--t-fast)) backwards;
+}
+
+.debrief-questions > li:nth-child(1) {
+  --i: 2;
+}
+
+.debrief-questions > li:nth-child(2) {
+  --i: 3;
+}
+
+.debrief-questions > li:nth-child(3) {
+  --i: 4;
+}
+
+.debrief-questions > li:nth-child(4) {
+  --i: 5;
+}
+
+.debrief-questions > li:nth-child(n + 5) {
+  --i: 6;
 }
 
 .feedback {
@@ -1782,6 +1979,9 @@ button.chip[aria-busy="true"] {
   color: var(--muted);
   font-size: var(--fs-sm);
   font-weight: 600;
+  transition:
+    border-color var(--t-base),
+    color var(--t-base);
 }
 
 .tab:hover {
@@ -1916,8 +2116,12 @@ button.chip[aria-busy="true"] {
       visibility 0s 0.25s;
   }
 
-  .sidebar-inner {
+  /* The drawer slides as a whole; its content doesn't fade on its own. */
+  .sidebar-inner,
+  .shell:not(.sidebar-open) .sidebar-inner {
     width: 100%;
+    opacity: 1;
+    transform: none;
   }
 
   .shell.drawer-open .sidebar {
@@ -2009,12 +2213,24 @@ button.chip[aria-busy="true"] {
   }
 }
 
+/* Reduced motion: nothing moves. Things simply appear, and nothing waits to appear either. */
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
   *::after {
     animation-duration: 0.01ms !important;
+    animation-delay: 0s !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
+    transition-delay: 0s !important;
+  }
+
+  button.chip:hover:not(:disabled):not(:active),
+  .ui-button:active:not(:disabled),
+  .ui-icon-button:active:not(:disabled),
+  .chip:active:not(:disabled),
+  .sidebar-row:active,
+  .ui-segmented-option:active {
+    transform: none;
   }
 }

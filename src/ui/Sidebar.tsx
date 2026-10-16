@@ -17,6 +17,8 @@ interface SidebarProps {
   onOpenSettings: () => void;
   settingsOpen: boolean;
   onHide: () => void;
+  /** True in focus mode: the sidebar is folded away and can't be reached. */
+  hidden?: boolean;
 }
 
 /** The left column, like a chat app's: a new interview, the past ones, and the settings. */
@@ -29,6 +31,7 @@ export function Sidebar({
   onOpenSettings,
   settingsOpen,
   onHide,
+  hidden = false,
 }: SidebarProps) {
   const [entries, setEntries] = useState<HistoryEntry[] | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -60,7 +63,7 @@ export function Sidebar({
   }
 
   return (
-    <nav className="sidebar" id="sidebar" aria-label={t.sidebar.label}>
+    <nav className="sidebar" id="sidebar" aria-label={t.sidebar.label} inert={hidden}>
       <div className="sidebar-inner">
         <div className="sidebar-top">
           <Brand />

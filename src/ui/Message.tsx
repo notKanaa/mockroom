@@ -1,6 +1,7 @@
 import type { TranscriptEntry } from "../server/api-types";
 import { useI18n } from "./i18n";
 import { Thinking } from "./kit";
+import { useSmoothText } from "./motion";
 import { Avatar, type Recruiter } from "./Recruiter";
 
 interface MessageProps {
@@ -18,6 +19,9 @@ export function Message({ message, recruiter, typing = false }: MessageProps) {
   const { t } = useI18n();
   const fromRecruiter = message.role === "interviewer";
   const waiting = typing && message.content === "";
+  // Only the recruiter's replies stream in; everything else shows at once.
+  const text = useSmoothText(message.content, typing && fromRecruiter);
+  const revealing = fromRecruiter && text.length < message.content.length;
 
   return (
     <li className={`message message-${message.role}`}>
@@ -32,7 +36,7 @@ export function Message({ message, recruiter, typing = false }: MessageProps) {
             <Thinking label={t.recruiter.thinking(recruiter.name)} />
           </p>
         ) : (
-          <p className={typing ? "message-text streaming" : "message-text"}>{message.content}</p>
+          <p className={typing || revealing ? "message-text streaming" : "message-text"}>{text}</p>
         )}
       </div>
     </li>
