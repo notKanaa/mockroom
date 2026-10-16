@@ -53,14 +53,15 @@ Run `npm run sfx` once before rendering a single composition (`npm run render` a
 
 ## Sound
 
-The sound is sketched in code, so the film has its full sound design before the final effects exist:
+- **Music and voice** come from [ElevenLabs](https://elevenlabs.io), in `public/audio/final/` (committed, about 2 MB): one music track for the whole film (`music.mp3`), composed in the film's sections at 120 BPM (a tense intro, a reveal on the logo, a steady groove, a break into the dark stage, a final build, a clean resolve), and a voice-over in English and French (voice "Sarah", 13 short lines each: `vo-en-01.mp3` …, `vo-fr-01.mp3` …). The music ducks under the voice.
+- **Effects** are synthesised in code: `scripts/sfx/` is a tiny synthesiser (noise, filters, envelopes, reverb), and `npm run sfx` makes its sounds into `public/audio/synth/` (gitignored; same result every time). Only about 30 hits play, each on a key beat of the picture.
 
-- `scripts/sfx/` is a tiny synthesiser (noise, filters, envelopes, reverb). `npm run sfx` makes 39 effects and a 120 BPM groove into `public/audio/synth/` (gitignored; same result every time).
-- `src/v2/cues.ts` places them on the beats, part by part, and for the whole film (where parts 2 to 4 share one groove so the beat never restarts).
-- **To use final sounds** (for instance from ElevenLabs): `npm run cues` writes `audio-cues.json`, with a brief per sound (what it should feel like) and every cue's time in seconds. Put a final sound in `public/audio/final/` under the same name (`slam.wav` or `slam.mp3`): it replaces its sketch everywhere, at the next preview or render.
+`src/v2/finalSound.ts` holds it all: the music brief, the effects and their beats, and the voice-over lines with their timing. To change a line, edit its text there, make the file again with ElevenLabs (same voice, `eleven_multilingual_v2`) and save it under the same name.
+
+Without `public/audio/final/music.mp3`, the film falls back to the full sketch synthesised in code (`src/v2/cues.ts`). The parts' own compositions (`Parts/…`) always use that sketch.
 
 ## Remotion's license
 
 Remotion is not MIT: it has its own [license](https://www.remotion.dev/license). It is free for individuals, for-profit organizations with up to 3 employees, and non-profits, including for commercial use such as ads. Bigger companies need a paid Company License. Mockroom, made by an individual, uses the free license. If Mockroom is ever made by a company of 4 or more people, check the license again. (The terms quoted here are from Remotion 4.0.536, in `node_modules/remotion/LICENSE.md`; Remotion says they will change slightly in version 5.)
 
-The fonts, Bricolage Grotesque and JetBrains Mono, are under the SIL Open Font License, and are loaded from Google Fonts at render time. The provider logos come from the app (Lobe Icons, MIT).
+The fonts, Bricolage Grotesque and JetBrains Mono, are under the SIL Open Font License, and are loaded from Google Fonts at render time. The provider logos come from the app (Lobe Icons, MIT). The music and the voice were generated with ElevenLabs on a paid plan, which allows commercial use.

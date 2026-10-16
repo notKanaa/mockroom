@@ -7,7 +7,7 @@ import { FilmProvider, useFilm, type FilmProps } from "../lib/film";
 import { stage } from "../theme/tokens";
 import { PART1_FRAMES, PART2_FRAMES, PART3_FRAMES, PART4_FRAMES, PART5_FRAMES } from "./beats";
 import { filmCues } from "./cues";
-import { finalEffects, musicBrief, voiceActivity, voiceFile, voiceLines } from "./finalSound";
+import { finalEffects, musicBrief, musicLevel, voiceFile, voiceLines } from "./finalSound";
 import { Part1 } from "./Part1";
 import { Part2 } from "./Part2";
 import { Part3 } from "./Part3";
@@ -44,7 +44,7 @@ export function FilmComposition(props: FilmProps) {
   );
 }
 
-/** The final sound design when its files are there (see finalSound.ts), else the synthesised sketch. */
+/** The final sound design (ElevenLabs music and voice, synthesised effects; see finalSound.ts) when the music is there, else the synthesised sketch. */
 function FilmSound() {
   const film = useFilm();
   const available = new Set(getStaticFiles().map((file) => file.name));
@@ -53,9 +53,9 @@ function FilmSound() {
   if (!music) return <SoundTrack cues={filmCues(film.sample)} />;
   return (
     <>
-      <Audio src={staticFile(music)} volume={(frame) => 0.75 * (1 - 0.5 * voiceActivity(film.locale, frame / 30))} />
+      <Audio src={staticFile(music)} volume={(frame) => musicLevel(film.locale, frame / 30)} />
       {finalEffects(film.sample).map((cue, index) => {
-        const file = final(cue.sound);
+        const file = available.has(`audio/synth/${cue.sound}.wav`) ? `audio/synth/${cue.sound}.wav` : undefined;
         return file ? (
           <Sequence key={`${cue.sound}-${index}`} from={cue.frame} layout="none" name={`♪ ${cue.sound}`}>
             <Audio src={staticFile(file)} volume={cue.volume * 0.8} />
