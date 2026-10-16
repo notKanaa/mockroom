@@ -2,10 +2,9 @@ import { useEffect, useState } from "react";
 import type { HistoryEntry, SavedInterview, TranscriptEntry } from "../server/api-types";
 import { deleteSavedInterview, fetchSavedInterview, listHistory } from "./api";
 import { DebriefDetails } from "./DebriefView";
-import { formatDateTime, languageLabels } from "./labels";
+import { formatDateTime, useI18n } from "./i18n";
+import type { UIMessages } from "./messages";
 import { Message } from "./Message";
-
-const deletePrompt = "Delete this interview from your history? Its transcript and debrief will be gone for good.";
 
 interface HistoryListProps {
   onOpen: (interviewId: string) => void;
@@ -17,6 +16,7 @@ export function HistoryList({ onOpen, onBack }: HistoryListProps) {
   const [entries, setEntries] = useState<HistoryEntry[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const { language, t } = useI18n();
 
   useEffect(() => {
     listHistory()
@@ -25,7 +25,7 @@ export function HistoryList({ onOpen, onBack }: HistoryListProps) {
   }, []);
 
   async function remove(entry: HistoryEntry) {
-    if (!window.confirm(deletePrompt)) return;
+    if (!window.confirm(t.history.deletePrompt)) return;
     setError(null);
     setDeletingId(entry.id);
     try {
@@ -42,10 +42,10 @@ export function HistoryList({ onOpen, onBack }: HistoryListProps) {
     <main className="history">
       <header className="history-header">
         <button type="button" className="link-button" onClick={onBack}>
-          ← Back to packs
+          {t.history.backToPacks}
         </button>
-        <h1>Past interviews</h1>
-        <p className="history-note">Saved on this computer only. Nothing is sent anywhere.</p>
+        <h1>{t.history.title}</h1>
+        <p className="history-note">{t.history.privacy}</p>
       </header>
 
       {error && (
@@ -53,10 +53,8 @@ export function HistoryList({ onOpen, onBack }: HistoryListProps) {
           {error}
         </p>
       )}
-      {!entries && !error && <p className="status">Loading your interviews…</p>}
-      {entries?.length === 0 && (
-        <p className="history-note">No interview yet. Once you finish or end one, it shows up here.</p>
-      )}
+      {!entries && !error && <p className="status">{t.history.loading}</p>}
+      {entries?.length === 0 && <p className="history-note">{t.history.empty}</p>}
 
       {entries && entries.length > 0 && (
         <ul className="packs">
@@ -65,11 +63,12 @@ export function HistoryList({ onOpen, onBack }: HistoryListProps) {
               <div className="pack-info">
                 <p className="pack-title">{entry.packs.map((pack) => pack.title).join(" + ")}</p>
                 <p className="pack-meta">
-                  {formatDateTime(entry.startedAt)} · {languageLabels[entry.language]}
+                  {formatDateTime(entry.startedAt, language)} ·{" "}
+                  {t.history.interviewIn(t.languageNames[entry.language])}
                 </p>
                 <p className="pack-themes">
-                  {progressLabel(entry)}
-                  {!entry.hasDebrief && " · No debrief"}
+                  {progressLabel(entry, t)}
+                  {!entry.hasDebrief && ` · ${t.history.noDebrief}`}
                 </p>
               </div>
               <div className="history-actions">
@@ -79,10 +78,10 @@ export function HistoryList({ onOpen, onBack }: HistoryListProps) {
                   onClick={() => void remove(entry)}
                   disabled={deletingId === entry.id}
                 >
-                  {deletingId === entry.id ? "Deleting…" : "Delete"}
+                  {deletingId === entry.id ? t.common.deleting : t.history.delete}
                 </button>
                 <button type="button" onClick={() => onOpen(entry.id)}>
-                  Open
+                  {t.history.open}
                 </button>
               </div>
             </li>
@@ -106,6 +105,7 @@ export function SavedInterviewView({ interviewId, onBack }: SavedInterviewViewPr
   const [error, setError] = useState<string | null>(null);
   const [tab, setTab] = useState<Tab>("debrief");
   const [deleting, setDeleting] = useState(false);
+  const { language, t } = useI18n();
 
   useEffect(() => {
     fetchSavedInterview(interviewId)
@@ -117,7 +117,7 @@ export function SavedInterviewView({ interviewId, onBack }: SavedInterviewViewPr
   }, [interviewId]);
 
   async function remove() {
-    if (!window.confirm(deletePrompt)) return;
+    if (!window.confirm(t.history.deletePrompt)) return;
     setError(null);
     setDeleting(true);
     try {
@@ -133,14 +133,14 @@ export function SavedInterviewView({ interviewId, onBack }: SavedInterviewViewPr
     <main className="debrief">
       <header className="debrief-header">
         <button type="button" className="link-button" onClick={onBack}>
-          ← Past interviews
+          {t.history.back}
         </button>
         {interview && (
           <>
             <p className="room-pack history-pack">{interview.packs.map((pack) => pack.title).join(" + ")}</p>
-            <h1>{formatDateTime(interview.startedAt)}</h1>
+            <h1>{formatDateTime(interview.startedAt, language)}</h1>
             <p className="history-note">
-              {languageLabels[interview.language]} · {progressLabel(interview)}
+              {t.history.interviewIn(t.languageNames[interview.language])} · {progressLabel(interview, t)}
             </p>
           </>
         )}
@@ -151,35 +151,32 @@ export function SavedInterviewView({ interviewId, onBack }: SavedInterviewViewPr
           {error}
         </p>
       )}
-      {!interview && !error && <p className="status">Loading the interview…</p>}
+      {!interview && !error && <p className="status">{t.history.loadingInterview}</p>}
 
       {interview && (
         <>
-          <div className="tabs" role="tablist" aria-label="Interview">
+          <div className="tabs" role="tablist" aria-label={t.history.tabs}>
             <TabButton tab="debrief" current={tab} onSelect={setTab}>
-              Debrief
+              {t.history.debriefTab}
             </TabButton>
             <TabButton tab="transcript" current={tab} onSelect={setTab}>
-              Transcript
+              {t.history.transcriptTab}
             </TabButton>
           </div>
 
-          <section role="tabpanel" aria-label={tab === "debrief" ? "Debrief" : "Transcript"}>
+          <section role="tabpanel" aria-label={tab === "debrief" ? t.history.debriefTab : t.history.transcriptTab}>
             {tab === "debrief" &&
               (interview.debrief ? (
                 <DebriefDetails debrief={interview.debrief} totalQuestions={interview.totalQuestions} />
               ) : (
-                <p className="debrief-note">
-                  This interview has no debrief: it couldn't be written, or Mockroom was closed before it was ready.
-                  The transcript is still here.
-                </p>
+                <p className="debrief-note">{t.history.missingDebrief}</p>
               ))}
             {tab === "transcript" && <Transcript interview={interview} />}
           </section>
 
           <footer className="debrief-footer">
             <button type="button" className="secondary-button" onClick={() => void remove()} disabled={deleting}>
-              {deleting ? "Deleting…" : "Delete this interview"}
+              {deleting ? t.common.deleting : t.history.deleteInterview}
             </button>
           </footer>
         </>
@@ -211,6 +208,7 @@ function TabButton({ tab, current, onSelect, children }: TabButtonProps) {
 
 /** The whole conversation, grouped under each main question with its follow-ups. */
 function Transcript({ interview }: { interview: SavedInterview }) {
+  const { t } = useI18n();
   const groups: { questionNumber?: number; messages: TranscriptEntry[] }[] = [];
   for (const message of interview.transcript) {
     const last = groups.at(-1);
@@ -226,7 +224,7 @@ function Transcript({ interview }: { interview: SavedInterview }) {
           <section key={index} className="transcript-group">
             {group.questionNumber !== undefined && (
               <h2 className="feedback-theme">
-                Question {group.questionNumber}
+                {t.common.question(group.questionNumber)}
                 {theme && ` · ${theme}`}
               </h2>
             )}
@@ -242,7 +240,11 @@ function Transcript({ interview }: { interview: SavedInterview }) {
   );
 }
 
-function progressLabel({ endedEarly, answeredQuestions, totalQuestions }: HistoryEntry | SavedInterview): string {
-  if (!endedEarly) return `All ${totalQuestions} questions answered`;
-  return `Ended early · ${answeredQuestions} of ${totalQuestions} questions answered`;
+function progressLabel(
+  { endedEarly, answeredQuestions, totalQuestions }: HistoryEntry | SavedInterview,
+  t: UIMessages,
+): string {
+  return endedEarly
+    ? t.history.endedEarly(answeredQuestions, totalQuestions)
+    : t.history.allAnswered(totalQuestions);
 }

@@ -2,6 +2,8 @@ import { randomUUID } from "node:crypto";
 import type { AIModel } from "../ai/model.js";
 import type { InterviewHistory } from "../history/store.js";
 import type { SavedInterview } from "../history/types.js";
+import { LocalizedError, localizedMessage, type Language, type Text } from "../i18n.js";
+import { say } from "../messages.js";
 import type { Pack } from "../packs/pack.js";
 import { DebriefFormatError, writeDebrief } from "./debrief.js";
 import { shouldFollowUp } from "./follow-up.js";
@@ -39,12 +41,12 @@ export type InterviewErrorCode =
   | "not-finished"
   | "debrief-failed";
 
-export class InterviewError extends Error {
+export class InterviewError extends LocalizedError {
   constructor(
     readonly code: InterviewErrorCode,
-    message: string,
+    text: Text,
   ) {
-    super(message);
+    super(text);
   }
 }
 
@@ -64,6 +66,8 @@ const defaultFollowUpsPerQuestion = 2;
 interface Interview {
   id: string;
   pack: Pack;
+  /** The language the interviewer and debrief use, whatever the pack's own language. */
+  language: Language;
   startedAt: Date;
   /** Set when the interview finishes. */
   finishedAt?: Date;
@@ -115,8 +119,11 @@ export class InterviewEngine {
     this.#now = now;
   }
 
-  /** Starts an interview on a pack. The interviewer greets the candidate and asks question 1. */
-  start(pack: Pack): InterviewTurn {
+  /**
+   * Starts an interview on a pack, held in `language` (by default, the pack's).
+   * The interviewer greets the candidate and asks question 1.
+   */
+  start(pack: Pack, language: Language = pack.language): InterviewTurn {
     const questions = planQuestions(pack, this.#questionsPerInterview);
     const firstQuestion = questions[0];
     if (firstQuestion === undefined) throw new Error(`Pack "${pack.id}" has no questions.`);
@@ -124,6 +131,7 @@ export class InterviewEngine {
     const interview: Interview = {
       id: randomUUID(),
       pack,
+      language,
       startedAt: this.#now(),
       questions,
       status: "setup",
@@ -148,14 +156,10 @@ export class InterviewEngine {
    */
   answer(id: string, answer: string): InterviewTurn {
     const interview = this.#find(id);
-    if (interview.status === "finished") {
-      throw new InterviewError("finished", "This interview is already over.");
-    }
-    if (interview.busy) {
-      throw new InterviewError("busy", "The interviewer is still writing. Wait for their message.");
-    }
+    if (interview.status === "finished") throw new InterviewError("finished", say("interviewFinished"));
+    if (interview.busy) throw new InterviewError("busy", say("interviewerBusy"));
     const content = answer.trim();
-    if (content === "") throw new InterviewError("empty-answer", "The answer is empty.");
+    if (content === "") throw new InterviewError("empty-answer", say("emptyAnswer"));
 
     const { pack, questionNumber, followUpNumber } = interview;
     const transcript: TranscriptEntry[] = [
@@ -182,12 +186,8 @@ export class InterviewEngine {
   /** Ends the interview before the last question. The debrief covers the questions answered so far. */
   async end(id: string): Promise<InterviewSummary> {
     const interview = this.#find(id);
-    if (interview.status === "finished") {
-      throw new InterviewError("finished", "This interview is already over.");
-    }
-    if (interview.busy) {
-      throw new InterviewError("busy", "The interviewer is still writing. Wait for their message.");
-    }
+    if (interview.status === "finished") throw new InterviewError("finished", say("interviewFinished"));
+    if (interview.busy) throw new InterviewError("busy", say("interviewerBusy"));
     interview.status = "finished";
     interview.finishedAt = this.#now();
     interview.followUpNumber = 0;
@@ -200,12 +200,13 @@ export class InterviewEngine {
   async debrief(id: string): Promise<Debrief> {
     const interview = this.#find(id);
     if (interview.status !== "finished") {
-      throw new InterviewError("not-finished", "The interview isn't over yet.");
+      throw new InterviewError("not-finished", say("interviewNotFinished"));
     }
     if (interview.debrief) return interview.debrief;
 
     const writing = (interview.writingDebrief ??= writeDebrief(this.#model, {
       pack: interview.pack,
+      language: interview.language,
       answered: interview.questions.slice(0, interview.answeredQuestions),
       totalQuestions: interview.questions.length,
       transcript: interview.transcript,
@@ -218,10 +219,9 @@ export class InterviewEngine {
     try {
       return await writing;
     } catch (error) {
-      if (error instanceof DebriefFormatError) throw new InterviewError("debrief-failed", error.message);
-      throw new InterviewError(
-        "debrief-failed",
-        `The debrief couldn't be written: ${error instanceof Error ? error.message : String(error)}`,
+      if (error instanceof DebriefFormatError) throw new InterviewError("debrief-failed", error.text);
+      throw new InterviewError("debrief-failed", (language) =>
+        say("debriefFailed", localizedMessage(error, language))(language),
       );
     } finally {
       if (interview.writingDebrief === writing) interview.writingDebrief = undefined;
@@ -254,7 +254,7 @@ export class InterviewEngine {
 
   #find(id: string): Interview {
     const interview = this.#interviews.get(id);
-    if (!interview) throw new InterviewError("not-found", "This interview doesn't exist.");
+    if (!interview) throw new InterviewError("not-found", say("interviewNotFound"));
     return interview;
   }
 
@@ -279,13 +279,19 @@ export class InterviewEngine {
         const answeredQuestions = step.kind === "open" ? 0 : interview.questionNumber;
         yield { type: "interview", interview: { ...summarize(interview), ...next } };
 
-        const messages = interviewerPrompt(interview.pack, interview.questions.length, transcript, step);
+        const messages = interviewerPrompt(
+          interview.pack,
+          interview.language,
+          interview.questions.length,
+          transcript,
+          step,
+        );
         let text = "";
         for await (const chunk of model.streamText(messages)) {
           text += chunk;
           yield { type: "delta", text: chunk };
         }
-        if (text.trim() === "") throw new Error("The AI model sent an empty reply.");
+        if (text.trim() === "") throw new LocalizedError(say("emptyReply"));
 
         interview.transcript = [...transcript, { role: "interviewer", content: text, ...questionTags(step) }];
         interview.status = next.status;
@@ -359,7 +365,7 @@ function toSaved(interview: Interview): SavedInterview {
     startedAt: startedAt.toISOString(),
     finishedAt: finishedAt.toISOString(),
     packs: [{ id: pack.id, title: pack.title, technology: pack.technology, level: pack.level }],
-    language: pack.language,
+    language: interview.language,
     totalQuestions: interview.questions.length,
     answeredQuestions: interview.answeredQuestions,
     endedEarly: interview.endedEarly,
@@ -372,6 +378,7 @@ function summarize(interview: Interview): InterviewSummary {
   return {
     id: interview.id,
     pack: { id: interview.pack.id, title: interview.pack.title },
+    language: interview.language,
     status: interview.status,
     questionNumber: interview.questionNumber,
     followUpNumber: interview.followUpNumber,

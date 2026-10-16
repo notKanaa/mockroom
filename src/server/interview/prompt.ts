@@ -1,4 +1,5 @@
 import type { ChatMessage } from "../ai/model.js";
+import type { Language } from "../i18n.js";
 import type { Pack, PackTheme } from "../packs/pack.js";
 import type { TranscriptEntry } from "./types.js";
 
@@ -15,21 +16,34 @@ export type InterviewerStep =
   | { kind: "follow-up"; questionNumber: number; question: PlannedQuestion; followUpNumber: number }
   | { kind: "close" };
 
-const languageNames: Record<Pack["language"], string> = { en: "English", fr: "French" };
+export const languageNames: Record<Language, string> = { en: "English", fr: "French" };
 
 /** Opens every conversation, since some providers require it to start with the user. */
-export const candidateJoinedMessage = "Hello, I'm ready for the interview.";
+export const candidateJoinedMessages: Record<Language, string> = {
+  en: "Hello, I'm ready for the interview.",
+  fr: "Bonjour, je suis prêt pour l'entretien.",
+};
+
+/**
+ * Tells the model to speak `language` even though the pack (and these
+ * instructions) are written in another one. Empty when they match.
+ */
+export function translationNote(pack: Pack, language: Language): string {
+  if (pack.language === language) return "";
+  return ` The pack's questions, themes and key points are written in ${languageNames[pack.language]}: translate them into ${languageNames[language]}.`;
+}
 
 /** Builds the conversation sent to the AI model for the interviewer's next message. */
 export function interviewerPrompt(
   pack: Pack,
+  language: Language,
   totalQuestions: number,
   transcript: TranscriptEntry[],
   step: InterviewerStep,
 ): ChatMessage[] {
   return [
-    { role: "system", content: systemPrompt(pack, totalQuestions, step) },
-    { role: "user", content: candidateJoinedMessage },
+    { role: "system", content: systemPrompt(pack, language, totalQuestions, step) },
+    { role: "user", content: candidateJoinedMessages[language] },
     ...transcript.map(
       ({ role, content }): ChatMessage => ({
         role: role === "interviewer" ? "assistant" : "user",
@@ -39,8 +53,8 @@ export function interviewerPrompt(
   ];
 }
 
-function systemPrompt(pack: Pack, totalQuestions: number, step: InterviewerStep): string {
-  return `You are a friendly, professional technical interviewer running a mock job interview for a ${pack.level} ${pack.technology} developer position. Conduct the interview in ${languageNames[pack.language]}.
+function systemPrompt(pack: Pack, language: Language, totalQuestions: number, step: InterviewerStep): string {
+  return `You are a friendly, professional technical interviewer running a mock job interview for a ${pack.level} ${pack.technology} developer position. Conduct the interview in ${languageNames[language]}: write every message in ${languageNames[language]}, even though these instructions are in English.${translationNote(pack, language)}
 
 Rules:
 - Ask exactly one question per message: the one you are told to ask next. You may rephrase it slightly so it sounds natural, but keep its meaning.

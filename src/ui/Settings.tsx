@@ -1,6 +1,7 @@
 import { useEffect, useState, type FormEvent } from "react";
 import type { AISettingsInput, AISettingsView, ConnectionTest, ProviderName } from "../server/api-types";
 import { fetchSettings, listOllamaModels, saveSettings, testConnection } from "./api";
+import { RichText, useI18n } from "./i18n";
 
 interface SettingsProps {
   /** True when no AI provider is set up yet: the candidate is welcomed here before anything else. */
@@ -33,6 +34,7 @@ export function Settings({ firstLaunch, onBack }: SettingsProps) {
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [savedMessage, setSavedMessage] = useState<string | null>(null);
+  const { t } = useI18n();
 
   useEffect(() => {
     fetchSettings()
@@ -82,7 +84,7 @@ export function Settings({ firstLaunch, onBack }: SettingsProps) {
   if (!view) {
     return (
       <main className="settings">
-        <p className="status">Loading your settings…</p>
+        <p className="status">{t.settings.loading}</p>
       </main>
     );
   }
@@ -145,8 +147,8 @@ export function Settings({ firstLaunch, onBack }: SettingsProps) {
       if (settings.provider === "ollama") void refreshOllamaModels(form.ollamaUrl);
       setSavedMessage(
         saved.active?.source === "environment"
-          ? "Saved. Environment variables still override these settings, though."
-          : `Saved. Interviews now use ${info?.label} (${settings.model}).`,
+          ? t.settings.savedWithEnv
+          : t.settings.saved(info?.label ?? settings.provider, settings.model),
       );
     } catch (failure) {
       setSaveError(messageOf(failure));
@@ -167,27 +169,26 @@ export function Settings({ firstLaunch, onBack }: SettingsProps) {
     <main className="settings">
       <header className="history-header">
         <button type="button" className="link-button" onClick={onBack}>
-          {firstLaunch && !view.configured ? "Skip for now" : "← Back"}
+          {firstLaunch && !view.configured ? t.settings.skip : t.settings.back}
         </button>
-        <h1>{firstLaunch ? "Welcome to Mockroom" : "Settings"}</h1>
-        <p className="history-note">
-          {firstLaunch
-            ? "First, choose the AI that will interview you. Use your own API key, or Ollama to run a free model on your computer."
-            : "The AI that interviews you."}
-        </p>
+        <h1>{firstLaunch ? t.settings.welcome : t.settings.title}</h1>
+        <p className="history-note">{firstLaunch ? t.settings.welcomeIntro : t.settings.intro}</p>
       </header>
 
       {fromEnvironment && (
         <p className="notice" role="note">
-          Mockroom is using {view.providers.find((provider) => provider.id === view.active?.provider)?.label} (
-          {view.active?.model}) from the <code>MOCKROOM_PROVIDER</code> environment variable, which overrides these
-          settings. What you save here applies once you remove it.
+          <RichText
+            text={t.settings.envProvider(
+              view.providers.find((provider) => provider.id === view.active?.provider)?.label ?? "",
+              view.active?.model ?? "",
+            )}
+          />
         </p>
       )}
 
       <form className="settings-form" onSubmit={save}>
         <fieldset className="providers">
-          <legend>AI provider</legend>
+          <legend>{t.settings.provider}</legend>
           {view.providers.map((provider) => (
             <label key={provider.id} className={`provider${form.provider === provider.id ? " provider-chosen" : ""}`}>
               <input
@@ -198,7 +199,7 @@ export function Settings({ firstLaunch, onBack }: SettingsProps) {
                 onChange={() => pickProvider(provider.id)}
               />
               <span className="provider-name">{provider.label}</span>
-              <span className="provider-note">{provider.needsKey ? "Your API key" : "Free, runs locally"}</span>
+              <span className="provider-note">{provider.needsKey ? t.settings.yourKey : t.settings.freeLocal}</span>
             </label>
           ))}
         </fieldset>
@@ -207,7 +208,7 @@ export function Settings({ firstLaunch, onBack }: SettingsProps) {
           <>
             {isOllama && (
               <div className="field">
-                <label htmlFor="ollama-url">Ollama address</label>
+                <label htmlFor="ollama-url">{t.settings.ollamaAddress}</label>
                 <div className="field-row">
                   <input
                     id="ollama-url"
@@ -222,17 +223,17 @@ export function Settings({ firstLaunch, onBack }: SettingsProps) {
                     onClick={() => void refreshOllamaModels(form.ollamaUrl)}
                     disabled={ollama.loading}
                   >
-                    {ollama.loading ? "Looking…" : "Refresh models"}
+                    {ollama.loading ? t.settings.looking : t.settings.refreshModels}
                   </button>
                 </div>
                 {view.ollamaUrl.source === "environment" && (
                   <p className="field-hint">
-                    <code>MOCKROOM_OLLAMA_URL</code> is set, so Mockroom uses {view.ollamaUrl.url} for interviews.
+                    <RichText text={t.settings.envOllamaUrl(view.ollamaUrl.url)} />
                   </p>
                 )}
                 {ollama.error && !ollama.loading && (
                   <p className="field-error" role="alert">
-                    {ollama.error} Don't have it yet? Get it from{" "}
+                    {ollama.error} {t.settings.getOllama}{" "}
                     <a href="https://ollama.com/download" target="_blank" rel="noreferrer">
                       ollama.com
                     </a>
@@ -241,20 +242,19 @@ export function Settings({ firstLaunch, onBack }: SettingsProps) {
                 )}
                 {ollama.models?.length === 0 && !ollama.loading && (
                   <p className="field-error" role="alert">
-                    Ollama has no model yet. Download one by running <code>ollama pull llama3.2</code> in a terminal,
-                    then refresh.
+                    <RichText text={t.settings.noOllamaModel} />
                   </p>
                 )}
               </div>
             )}
 
             <div className="field">
-              <label htmlFor="model">Model</label>
+              <label htmlFor="model">{t.settings.model}</label>
               {isOllama && modelChoices.length > 0 ? (
                 <select id="model" value={form.model} onChange={(event) => update({ model: event.target.value })}>
                   {modelChoices.map((model) => (
                     <option key={model} value={model}>
-                      {ollamaModels.includes(model) ? model : `${model} (not installed)`}
+                      {ollamaModels.includes(model) ? model : t.settings.notInstalled(model)}
                     </option>
                   ))}
                 </select>
@@ -277,37 +277,33 @@ export function Settings({ firstLaunch, onBack }: SettingsProps) {
               )}
               <p className="field-hint">
                 {isOllama
-                  ? "Small models are free but less sharp interviewers. Bigger ones need a stronger computer."
-                  : `Any ${info.label} model works. ${info.defaultModel ? `${info.defaultModel} is fast and cheap.` : ""}`}
+                  ? t.settings.ollamaHint
+                  : `${t.settings.modelHint(info.label)}${info.defaultModel ? ` ${t.settings.defaultModelHint(info.defaultModel)}` : ""}`}
               </p>
             </div>
 
             {info.needsKey && (
               <div className="field">
-                <label htmlFor="api-key">{info.label} API key</label>
+                <label htmlFor="api-key">{t.settings.apiKey(info.label)}</label>
                 <input
                   id="api-key"
                   type="password"
                   value={form.apiKey}
                   onChange={(event) => update({ apiKey: event.target.value })}
-                  placeholder={savedKey ? `${savedKey.masked} (leave empty to keep it)` : "Paste your key"}
+                  placeholder={savedKey ? t.settings.keepKey(savedKey.masked) : t.settings.pasteKey}
                   autoComplete="off"
                   spellCheck={false}
                 />
                 <p className="field-hint">
-                  {savedKey?.source === "environment" ? (
-                    <>
-                      <code>{info.keyEnvVar}</code> is set, so Mockroom uses that key, which overrides any key saved
-                      here.{" "}
-                    </>
-                  ) : (
-                    <>
-                      Saved in a file on this computer only (<code>{view.settingsFile}</code>), and only ever sent to{" "}
-                      {info.label}.{" "}
-                    </>
-                  )}
+                  <RichText
+                    text={
+                      savedKey?.source === "environment"
+                        ? t.settings.envKey(info.keyEnvVar ?? "")
+                        : t.settings.keyStorage(view.settingsFile, info.label)
+                    }
+                  />{" "}
                   <a href={info.keyPage} target="_blank" rel="noreferrer">
-                    Create a key
+                    {t.settings.createKey}
                   </a>
                 </p>
               </div>
@@ -331,14 +327,14 @@ export function Settings({ firstLaunch, onBack }: SettingsProps) {
 
             <div className="settings-actions">
               <button type="button" className="secondary-button" onClick={() => void test()} disabled={testing || !form.model.trim()}>
-                {testing ? "Testing…" : "Test connection"}
+                {testing ? t.settings.testing : t.settings.test}
               </button>
               <button type="submit" disabled={saving || !form.model.trim()}>
-                {saving ? "Saving…" : "Save"}
+                {saving ? t.settings.saving : t.settings.save}
               </button>
               {savedMessage && firstLaunch && (
                 <button type="button" onClick={onBack}>
-                  Choose an interview →
+                  {t.settings.chooseInterview}
                 </button>
               )}
             </div>

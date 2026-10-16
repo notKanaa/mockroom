@@ -1,5 +1,6 @@
 import type {
   Debrief,
+  Language,
   HistoryEntry,
   InterviewSummary,
   SavedInterview,
@@ -24,10 +25,15 @@ export interface JsonResult<T> {
 
 /** Talks to Mockroom's interview API the way the UI does. */
 export class InterviewClient {
-  constructor(readonly baseUrl: string) {}
+  /** `uiLanguage` is sent as `Accept-Language`, like the UI sends its own language. */
+  constructor(
+    readonly baseUrl: string,
+    readonly uiLanguage?: Language,
+  ) {}
 
-  start(packId = "react-junior-en"): Promise<TurnResult> {
-    return this.#turn("/api/interviews", { packId });
+  /** Starts an interview, in `language` when given (else the pack's). */
+  start(packId = "react-junior-en", language?: string): Promise<TurnResult> {
+    return this.#turn("/api/interviews", { packId, ...(language !== undefined && { language }) });
   }
 
   answer(interviewId: string, answer: string): Promise<TurnResult> {
@@ -64,7 +70,7 @@ export class InterviewClient {
   }
 
   async #request<T>(method: string, path: string): Promise<JsonResult<T>> {
-    const response = await fetch(`${this.baseUrl}${path}`, { method });
+    const response = await fetch(`${this.baseUrl}${path}`, { method, headers: this.#headers() });
     if (response.status === 204) return { status: response.status };
     const body = (await response.json()) as T | { error: string };
     if (!response.ok) return { status: response.status, error: (body as { error: string }).error };
@@ -74,7 +80,7 @@ export class InterviewClient {
   async #turn(path: string, body: unknown): Promise<TurnResult> {
     const response = await fetch(`${this.baseUrl}${path}`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { ...this.#headers(), "Content-Type": "application/json" },
       body: JSON.stringify(body),
     });
     if (!response.headers.get("content-type")?.includes("application/x-ndjson")) {
@@ -94,5 +100,9 @@ export class InterviewClient {
       if (event.type === "error") error = event.message;
     }
     return { status: response.status, events, text, interview, error };
+  }
+
+  #headers(): Record<string, string> {
+    return this.uiLanguage ? { "Accept-Language": this.uiLanguage } : {};
   }
 }

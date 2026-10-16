@@ -687,3 +687,83 @@ textarea:focus-visible {
   flex-wrap: wrap;
   gap: 8px;
 }
+
+/* Interface language switch, top right of every screen. */
+.language-switch {
+  position: fixed;
+  top: 12px;
+  right: 16px;
+  z-index: 10;
+  display: flex;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.language-option {
+  padding: 4px 10px;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  color: var(--muted);
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.language-current {
+  background: var(--accent-soft);
+  color: var(--text);
+}
+
+.language-option:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
+/* Interview language, chosen before starting. */
+.interview-language {
+  margin: 0 0 16px;
+  padding: 0;
+  border: none;
+}
+
+.interview-language legend {
+  margin-bottom: 6px;
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.language-choices {
+  display: flex;
+  gap: 8px;
+}
+
+.language-choice {
+  padding: 6px 14px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+.language-choice input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.language-choice:has(input:focus-visible) {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.language-choice-current {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.pack-translated {
+  color: var(--accent);
+}

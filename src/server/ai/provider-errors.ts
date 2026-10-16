@@ -1,9 +1,11 @@
 import { APICallError, LoadAPIKeyError, RetryError } from "ai";
+import { LocalizedError, type Text } from "../i18n.js";
+import { say } from "../messages.js";
 import type { AIModel, ChatMessage } from "./model.js";
 import { providerLabels, type KeyedProviderName, type ProviderConnection } from "./provider.js";
 
 /** A provider failure, explained in words the candidate can act on. The original error is its `cause`. */
-export class ProviderError extends Error {}
+export class ProviderError extends LocalizedError {}
 
 /** Where to create an API key for each provider. */
 export const keyPages: Record<KeyedProviderName, string> = {
@@ -29,8 +31,8 @@ const networkErrorCodes = new Set([
  * Ollama model not downloaded, rate limit… Errors it doesn't recognise keep
  * their own message.
  */
-export function describeProviderError(error: unknown, connection: ProviderConnection): string {
-  if (error instanceof ProviderError) return error.message;
+export function describeProviderError(error: unknown, connection: ProviderConnection): Text {
+  if (error instanceof ProviderError) return error.text;
   // The AI SDK retries failed calls, then reports the last failure.
   const failure = RetryError.isInstance(error) ? error.lastError : error;
   const { provider, model, ollamaUrl } = connection;
@@ -39,39 +41,30 @@ export function describeProviderError(error: unknown, connection: ProviderConnec
   if (LoadAPIKeyError.isInstance(failure) && provider !== "ollama") return missingKeyMessage(provider);
 
   if (isNetworkError(failure)) {
-    return provider === "ollama"
-      ? `Mockroom can't reach Ollama at ${ollamaUrl}. Is the Ollama app running? Start it, or check the Ollama address in Settings, then try again.`
-      : `Mockroom can't reach ${label}. Check your internet connection, then try again.`;
+    return provider === "ollama" ? say("ollamaUnreachable", ollamaUrl) : say("providerUnreachable", label);
   }
 
   if (APICallError.isInstance(failure)) {
     const status = failure.statusCode;
     const details = failure.message;
     if (provider !== "ollama" && (status === 401 || status === 403 || /api.key/i.test(details))) {
-      return `${label} rejected your API key. Check it in Settings, or create a new one at ${keyPages[provider]}.`;
+      return say("keyRejected", label, keyPages[provider]);
     }
     if (status === 404 || /model.*not.?found|not.?found.*model|does not exist/i.test(details)) {
-      return provider === "ollama"
-        ? `Ollama doesn't have the model "${model}" yet. Download it by running "ollama pull ${model}" in a terminal, or pick an installed model in Settings.`
-        : `${label} doesn't know the model "${model}". Check the model name in Settings.`;
+      return provider === "ollama" ? say("ollamaModelMissing", model) : say("unknownModel", label, model);
     }
-    if (status === 429) {
-      return `${label} is turning down requests for now (rate limit or quota reached). Wait a minute and try again, or check your ${label} plan and billing.`;
-    }
-    if (status !== undefined && status >= 500) {
-      return `${label} is having trouble right now (error ${status}). Try again in a moment.`;
-    }
-    return `${label} returned an error${status ? ` (${status})` : ""}: ${details}`;
+    if (status === 429) return say("rateLimited", label);
+    if (status !== undefined && status >= 500) return say("providerDown", label, status);
+    return say("providerFailed", label, status, details);
   }
 
-  if (failure instanceof Error && failure.name === "AbortError") {
-    return `${label} took too long to answer. Try again, or pick a faster model in Settings.`;
-  }
-  return failure instanceof Error ? failure.message : String(failure);
+  if (failure instanceof Error && failure.name === "AbortError") return say("providerTimeout", label);
+  const message = failure instanceof Error ? failure.message : String(failure);
+  return () => message;
 }
 
-export function missingKeyMessage(provider: KeyedProviderName): string {
-  return `Mockroom has no ${providerLabels[provider]} API key. Add yours in Settings (create one at ${keyPages[provider]}).`;
+export function missingKeyMessage(provider: KeyedProviderName): Text {
+  return say("missingKey", providerLabels[provider], keyPages[provider]);
 }
 
 /** Wraps a model so its failures come out as clear `ProviderError`s. */

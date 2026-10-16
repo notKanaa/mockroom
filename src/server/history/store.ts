@@ -1,5 +1,7 @@
 import { mkdir, readFile, readdir, rename, unlink, writeFile } from "node:fs/promises";
 import { join } from "node:path";
+import { LocalizedError } from "../i18n.js";
+import { say } from "../messages.js";
 import type { HistoryEntry, SavedInterview } from "./types.js";
 
 const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -24,7 +26,7 @@ export class InterviewHistory {
   /** Saves an interview, replacing its previous version. */
   save(interview: SavedInterview): Promise<void> {
     const { id } = interview;
-    if (!uuidPattern.test(id)) return Promise.reject(new Error(`"${id}" isn't a valid interview id.`));
+    if (!uuidPattern.test(id)) return Promise.reject(new LocalizedError(say("invalidInterviewId", id)));
 
     const write = (this.#writes.get(id) ?? Promise.resolve())
       .catch(() => {})
@@ -107,7 +109,7 @@ export class InterviewHistory {
       interview = undefined;
     }
     if (!isSavedInterview(interview, id)) {
-      throw new Error(`The saved interview ${file} is damaged or from an unknown version, so it was skipped.`);
+      throw new LocalizedError(say("damagedInterview", file));
     }
     return interview;
   }

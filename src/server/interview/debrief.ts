@@ -1,11 +1,15 @@
 import { collectText, type AIModel, type ChatMessage } from "../ai/model.js";
+import { LocalizedError, type Language } from "../i18n.js";
+import { say } from "../messages.js";
 import type { Pack, PackResource } from "../packs/pack.js";
-import type { PlannedQuestion } from "./prompt.js";
+import { languageNames, translationNote, type PlannedQuestion } from "./prompt.js";
 import type { Debrief, DebriefQuestion, TranscriptEntry } from "./types.js";
 
 /** What the debrief is written from. */
 export interface DebriefRequest {
   pack: Pack;
+  /** The language to write the debrief in. */
+  language: Language;
   /** The questions the candidate answered, in order. Question 1 first. */
   answered: PlannedQuestion[];
   totalQuestions: number;
@@ -14,9 +18,7 @@ export interface DebriefRequest {
 }
 
 /** The AI model sent a debrief Mockroom can't use, even after asking again. */
-export class DebriefFormatError extends Error {}
-
-const languageNames: Record<Pack["language"], string> = { en: "English", fr: "French" };
+export class DebriefFormatError extends LocalizedError {}
 
 /**
  * Asks the AI model for the debrief, as JSON, and checks it. A malformed reply
@@ -42,17 +44,15 @@ export async function writeDebrief(model: AIModel, request: DebriefRequest): Pro
       },
     );
   }
-  throw new DebriefFormatError(
-    `The AI model sent a debrief Mockroom couldn't read, even after a second try (${problem}). Try again, or switch to a more capable model.`,
-  );
+  throw new DebriefFormatError(say("debriefUnreadable", problem));
 }
 
-function debriefPrompt({ pack, answered, totalQuestions, transcript, endedEarly }: DebriefRequest): ChatMessage[] {
+function debriefPrompt({ pack, language, answered, totalQuestions, transcript, endedEarly }: DebriefRequest): ChatMessage[] {
   const coverage = endedEarly
     ? `The candidate ended the interview early, after answering ${answered.length} of the ${totalQuestions} questions. Give feedback on these ${answered.length} questions only:`
     : `The candidate answered all ${totalQuestions} questions:`;
 
-  const system = `You are a friendly technical interviewer writing the debrief of a mock job interview for a ${pack.level} ${pack.technology} developer position, from the "${pack.title}" interview pack. Write every text in ${languageNames[pack.language]}, but keep the JSON keys in English.
+  const system = `You are a friendly technical interviewer writing the debrief of a mock job interview for a ${pack.level} ${pack.technology} developer position, from the "${pack.title}" interview pack. Write every text in ${languageNames[language]}, even though these instructions are in English, but keep the JSON keys in English.${translationNote(pack, language)}
 
 ${coverage}
 
