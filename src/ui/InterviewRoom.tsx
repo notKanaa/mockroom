@@ -22,6 +22,7 @@ export function InterviewRoom({ session, onOpenSettings }: InterviewRoomProps) {
   const { interview, messages, streaming, error, ending, endError, debrief, draft, setDraft } = session;
   const { t } = useI18n();
   const scrollRef = useRef<HTMLDivElement>(null);
+  const columnRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const finished = interview?.status === "finished";
   useAutoGrow(inputRef, draft);
@@ -30,6 +31,27 @@ export function InterviewRoom({ session, onOpenSettings }: InterviewRoomProps) {
     const scroller = scrollRef.current;
     if (scroller) scroller.scrollTop = scroller.scrollHeight;
   }, [messages, finished, debrief.error]);
+
+  useEffect(() => {
+    // Streamed text is revealed a little every frame (see Message), after `messages` changed:
+    // the conversation keeps following it down, unless the candidate scrolled up to read.
+    const scroller = scrollRef.current;
+    const column = columnRef.current;
+    if (!scroller || !column) return;
+    let atBottom = true;
+    const onScroll = () => {
+      atBottom = scroller.scrollHeight - scroller.scrollTop - scroller.clientHeight < 48;
+    };
+    const observer = new ResizeObserver(() => {
+      if (atBottom) scroller.scrollTop = scroller.scrollHeight;
+    });
+    scroller.addEventListener("scroll", onScroll, { passive: true });
+    observer.observe(column);
+    return () => {
+      scroller.removeEventListener("scroll", onScroll);
+      observer.disconnect();
+    };
+  }, []);
 
   useEffect(() => {
     // The page may have been scrolled on the screen before; the room starts at the top.
@@ -77,7 +99,10 @@ export function InterviewRoom({ session, onOpenSettings }: InterviewRoomProps) {
           thinking={streaming}
         />
         <p className="room-progress" aria-live="polite">
-          {progress}
+          {/* A new key on each step, so the new line arrives with its own motion. */}
+          <span key={progress} className="room-progress-text">
+            {progress}
+          </span>
         </p>
         {!finished && (
           <Button variant="ghost" size="sm" onClick={confirmEnd} disabled={streaming || ending}>
@@ -87,7 +112,7 @@ export function InterviewRoom({ session, onOpenSettings }: InterviewRoomProps) {
       </header>
 
       <div className="room-scroll" ref={scrollRef}>
-        <div className="room-column">
+        <div className="room-column" ref={columnRef}>
           <ol className="chat" aria-label={t.room.conversation}>
             {messages.map((message, index) => {
               const isTyping = streaming && index === messages.length - 1 && message.role === "interviewer";
