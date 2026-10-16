@@ -33,11 +33,13 @@ interface UiViewportProps {
   theme?: ThemeName;
   /** Receives where each `data-anchor` element sits, for the camera and the cursor. */
   onAnchors?: (anchors: Anchors) => void;
+  /** Lets what is behind show through, for UI pieces floating on the film's own stage. */
+  transparent?: boolean;
   children: ReactNode;
   style?: CSSProperties;
 }
 
-export function UiViewport({ width, height, scale, camera, theme = "light", onAnchors, children, style }: UiViewportProps) {
+export function UiViewport({ width, height, scale, camera, theme = "light", onAnchors, transparent = false, children, style }: UiViewportProps) {
   const rootRef = useRef<HTMLDivElement>(null);
   const anchors = useAnchors(rootRef);
   const reported = useRef("");
@@ -58,6 +60,7 @@ export function UiViewport({ width, height, scale, camera, theme = "light", onAn
         className="mr-ui"
         style={{
           ...(themes[theme] as CSSProperties),
+          ...(transparent && { background: "transparent" }),
           position: "absolute",
           left: 0,
           top: 0,

@@ -30,7 +30,7 @@ export const p1 = {
 
 export const PART2_FRAMES = 345;
 
-/** Part 2: the four promises on a 120 BPM grid (a beat every 15 frames), then the job offer. */
+/** Part 2: the four promises on a 120 BPM grid (a beat every 15 frames), then the job offer, read by the AI. */
 export const p2 = {
   logoOut: 4,
   free: 15,
@@ -40,18 +40,28 @@ export const p2 = {
   mit: 60,
   language: 75,
   toggle: 88,
-  machine: 105,
-  expand: 120,
-  demo: 150,
-  paper: 165,
-  paste: 195,
-  send: 210,
-  scan: 213,
-  marks: [228, 240, 252],
-  swap: 270,
-  fly: [272, 277, 282],
-  flyFrames: 16,
-  pack: 304,
-  start: 330,
-  whip: 336,
+  /** The toggle's knob morphs into the prompt box. */
+  morph: 100,
+  morphFrames: 22,
+  prompt: 116,
+  caption1: 104,
+  /** The job offer's words fading in, so many per frame. */
+  words: 128,
+  wordsPerFrame: 1.6,
+  send: 168,
+  glow: 170,
+  sheen: 174,
+  marks: [182, 192, 202],
+  lift: [214, 218, 222],
+  liftFrames: 20,
+  recede: 222,
+  caption2: 228,
+  card: 238,
+  drop: [250, 255, 260],
+  dropFrames: 14,
+  pack: 280,
+  summary: 292,
+  start: 318,
+  burst: 321,
+  burstFrames: 18,
 };

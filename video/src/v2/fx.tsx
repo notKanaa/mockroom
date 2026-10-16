@@ -71,32 +71,30 @@ export function Vignette({ strength = 0.55 }: { strength?: number }) {
   );
 }
 
-/** A ring of light expanding from a point and fading. */
-export function Shockwave({
+/** A soft burst of light: a blurred glow that swells from a point and fades. */
+export function Bloom({
   frame,
   at,
   x,
   y,
-  from,
-  to,
+  size,
   color,
-  width,
-  duration = 18,
+  duration = 20,
+  intensity = 1,
 }: {
   frame: number;
   at: number;
   x: number;
   y: number;
-  from: number;
-  to: number;
+  size: number;
   color: string;
-  width: number;
   duration?: number;
+  intensity?: number;
 }) {
   const t = (frame - at) / duration;
   if (t < 0 || t > 1) return null;
-  const eased = 1 - (1 - t) ** 3;
-  const size = from + (to - from) * eased;
+  const grow = 1 - (1 - t) ** 3;
+  const scale = 0.35 + 0.85 * grow;
   return (
     <div
       style={{
@@ -106,10 +104,101 @@ export function Shockwave({
         width: size,
         height: size,
         borderRadius: "50%",
-        border: `${width * (1 - t) + 0.5}px solid ${color}`,
-        opacity: (1 - t) * 0.9,
+        background: `radial-gradient(circle, ${color} 0%, transparent 62%)`,
+        filter: `blur(${size * 0.05}px)`,
+        transform: `scale(${scale})`,
+        opacity: Math.min(1, t * 8) * (1 - t) ** 1.6 * intensity,
+        pointerEvents: "none",
       }}
     />
+  );
+}
+
+/** An anamorphic light streak: a thin horizontal flare that stretches out and fades, like a lens catching a flash. */
+export function Streak({
+  frame,
+  at,
+  x,
+  y,
+  length,
+  thickness,
+  color,
+  duration = 16,
+}: {
+  frame: number;
+  at: number;
+  x: number;
+  y: number;
+  length: number;
+  thickness: number;
+  color: string;
+  duration?: number;
+}) {
+  const t = (frame - at) / duration;
+  if (t < 0 || t > 1) return null;
+  const grow = 1 - (1 - t) ** 4;
+  const width = length * (0.25 + 0.75 * grow);
+  return (
+    <div
+      style={{
+        position: "absolute",
+        left: x - width / 2,
+        top: y - thickness / 2,
+        width,
+        height: thickness,
+        borderRadius: thickness,
+        background: `linear-gradient(90deg, transparent, ${color} 35%, #ffffff 50%, ${color} 65%, transparent)`,
+        filter: `blur(${thickness * 0.6}px)`,
+        boxShadow: `0 0 ${thickness * 6}px ${color}`,
+        opacity: (1 - t) ** 1.4,
+        pointerEvents: "none",
+      }}
+    />
+  );
+}
+
+/** Words fading in from a blur, one after the other, as modern titles do. */
+export function BlurWords({
+  text,
+  frame,
+  start,
+  stagger = 2.5,
+  duration = 14,
+  exit,
+  style,
+}: {
+  text: string;
+  frame: number;
+  start: number;
+  stagger?: number;
+  duration?: number;
+  exit?: number;
+  style?: CSSProperties;
+}) {
+  const words = text.split(" ");
+  return (
+    <span style={{ display: "inline", ...style }}>
+      {words.map((word, index) => {
+        const t = Math.min(1, Math.max(0, (frame - start - index * stagger) / duration));
+        const eased = 1 - (1 - t) ** 3;
+        const leave = exit === undefined ? 0 : Math.min(1, Math.max(0, (frame - exit - index * 1.2) / 10));
+        return (
+          <span
+            key={index}
+            style={{
+              display: "inline-block",
+              whiteSpace: "pre",
+              opacity: eased * (1 - leave),
+              filter: `blur(${(1 - eased) * 14 + leave * 10}px)`,
+              transform: `translateY(${(1 - eased) * 0.25 - leave * 0.2}em) scale(${1 + (1 - eased) * 0.08})`,
+            }}
+          >
+            {word}
+            {index < words.length - 1 ? " " : ""}
+          </span>
+        );
+      })}
+    </span>
   );
 }
 

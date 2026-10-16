@@ -20,7 +20,7 @@ const Chevron = () => (
 );
 
 /** The AI model drop-down of the prompt and answer boxes (ModelPicker), closed. */
-function ModelButton({ model }: { model: string }) {
+export function ModelButton({ model }: { model: string }) {
   return (
     <span className="model-picker">
       <span className="ui-dropdown">
@@ -34,7 +34,7 @@ function ModelButton({ model }: { model: string }) {
 }
 
 /** The interview language (LanguagePicker in Home.tsx), closed. */
-function LanguageButton({ content }: { content: Content }) {
+export function LanguageButton({ content }: { content: Content }) {
   return (
     <span className="language-picker">
       <span>{content.ui.home.interviewIn}</span>
@@ -91,7 +91,7 @@ export interface HomeState {
 }
 
 /** Splits a text around the first occurrence of each term, in reading order. */
-function splitTerms(text: string, terms: string[]): { text: string; term?: number }[] {
+export function splitTerms(text: string, terms: string[]): { text: string; term?: number }[] {
   const found = terms
     .map((term, index) => ({ index, at: text.indexOf(term), term }))
     .filter((match) => match.at >= 0)

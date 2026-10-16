@@ -14,7 +14,7 @@ import { fonts } from "../theme/fonts";
 import { stage } from "../theme/tokens";
 import { p1 } from "./beats";
 import { part1Sound, SoundTrack } from "./sound";
-import { At, bump, Grain, impulse, Letters, rgbSplit, scatter, shake, Shockwave, useSpring, Vignette } from "./fx";
+import { At, Bloom, bump, Grain, impulse, Letters, rgbSplit, scatter, shake, Streak, useSpring, Vignette } from "./fx";
 
 
 /** Fast moves get a camera shutter: a few sub-frames blended, as on film. */
@@ -98,12 +98,12 @@ function Opening({ cx, cy }: { cx: number; cy: number }) {
   const fit = film.portrait ? 0.55 : film.square ? 0.68 : 1;
   const copy = film.film.problem;
 
-  // The ring pops in, beats faster and faster, and grows into a frame around the words.
+  // The ring pops in and beats faster and faster; as the words arrive it melts into a warm glow behind them.
   const born = sp(frame, p1.ringIn, { damping: 8, stiffness: 160 });
   const beat = p1.beats.reduce((sum, at, index) => sum + bump(frame, at, 2, index < 2 ? 9 : 5) * (index < 2 ? 0.16 : 0.1), 0);
-  const grow = sp(frame, p1.line1 - 4, { damping: 16, stiffness: 60 });
-  const ringSize = mix(110, 820 * fit, grow) * u * born * (1 + beat);
-  const ringStroke = mix(14, 5, grow) * u;
+  const melt = progress(frame, p1.line1 - 2, 14, easeIn);
+  const ringSize = 110 * u * born * (1 + beat) * (1 - melt * 0.5);
+  const orb = progress(frame, p1.line1 - 6, 30, easeOut);
 
   // The dive: the camera rushes into the ring's centre.
   const dive = progress(frame, p1.dive, p1.cost + 12 - p1.dive, easeIn);
@@ -133,19 +133,32 @@ function Opening({ cx, cy }: { cx: number; cy: number }) {
 
   return (
     <AbsoluteFill style={{ transformOrigin: `${cx}px ${cy}px`, transform: `scale(${zoom})` }}>
-      {/* Heartbeat ripples from the ring. */}
+      {/* The glow behind the words, pulsing with the heartbeat. */}
+      <At x={cx} y={cy}>
+        <div
+          style={{
+            width: 1500 * u * fit,
+            height: 900 * u * fit,
+            borderRadius: "50%",
+            background: `radial-gradient(closest-side, rgb(240 182 96 / ${0.16 + beat * 0.9}), rgb(240 182 96 / ${0.05 + beat * 0.2}) 45%, transparent)`,
+            filter: `blur(${40 * u}px)`,
+            opacity: orb,
+            transform: `scale(${0.8 + 0.2 * orb + beat * 0.3})`,
+          }}
+        />
+      </At>
+      {/* Each heartbeat flashes a soft light from the ring. */}
       {[p1.ringIn, ...p1.beats].map((at, index) => (
-        <Shockwave
+        <Bloom
           key={at}
           frame={frame}
           at={at}
           x={cx}
           y={cy}
-          from={ringSize}
-          to={ringSize + (index < 3 ? 380 : 220) * u}
-          color={index < 3 ? stage.text : stage.warn}
-          width={3 * u}
-          duration={index < 3 ? 24 : 14}
+          size={(index < 3 ? 520 : 760) * u}
+          color={index < 3 ? "rgb(232 236 239 / 0.55)" : "rgb(240 182 96 / 0.6)"}
+          duration={index < 3 ? 22 : 14}
+          intensity={index < 3 ? 0.8 : 0.6}
         />
       ))}
       <At x={cx} y={cy}>
@@ -154,9 +167,10 @@ function Opening({ cx, cy }: { cx: number; cy: number }) {
             width: ringSize,
             height: ringSize,
             borderRadius: "50%",
-            border: `${ringStroke}px solid ${stage.text}`,
-            opacity: mix(1, 0.32, grow),
-            boxShadow: `0 0 ${40 * u * beat * 4}px rgb(240 182 96 / ${beat * 2})`,
+            border: `${14 * u}px solid ${stage.text}`,
+            opacity: 1 - melt,
+            filter: `blur(${melt * 14 * u}px)`,
+            boxShadow: `0 0 ${(20 + beat * 160) * u}px rgb(240 182 96 / ${0.15 + beat * 2})`,
           }}
         />
       </At>
@@ -524,39 +538,9 @@ function Mark({ cx, cy }: { cx: number; cy: number }) {
           }}
         />
       </At>
-      <Shockwave frame={frame} at={p1.dock} x={cx} y={cy} from={size} to={size + 520 * u} color={stage.accent} width={4 * u} duration={22} />
-      <Shockwave frame={frame} at={p1.dock + 3} x={cx} y={cy} from={size} to={size + 320 * u} color={stage.text} width={2 * u} duration={18} />
-      <Sparks frame={frame} x={cx} y={cy} at={p1.dock} u={u} />
+      <Bloom frame={frame} at={p1.dock} x={cx} y={cy} size={900 * u} color="rgb(53 196 168 / 0.7)" duration={26} />
+      <Streak frame={frame} at={p1.dock} x={cx} y={cy} length={1700 * u} thickness={5 * u} color="rgb(53 196 168 / 0.9)" duration={20} />
     </AbsoluteFill>
-  );
-}
-
-function Sparks({ frame, x, y, at, u }: { frame: number; x: number; y: number; at: number; u: number }) {
-  const t = frame - at;
-  if (t < 0 || t > 20) return null;
-  return (
-    <>
-      {Array.from({ length: 14 }, (_, index) => {
-        const angle = (index / 14) * Math.PI * 2 + scatter(index, 5) * 0.3;
-        const speed = (14 + scatter(index, 9) * 6) * u;
-        const distance = speed * t * (1 - t / 40) + 95 * u;
-        const dot = (6 + scatter(index, 2) * 3) * u * (1 - t / 20);
-        return (
-          <div
-            key={index}
-            style={{
-              position: "absolute",
-              left: x + Math.cos(angle) * distance - dot / 2,
-              top: y + Math.sin(angle) * distance - dot / 2,
-              width: dot,
-              height: dot,
-              borderRadius: "50%",
-              background: index % 3 === 0 ? stage.text : stage.accent,
-            }}
-          />
-        );
-      })}
-    </>
   );
 }
 
