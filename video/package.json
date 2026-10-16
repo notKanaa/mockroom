@@ -1,0 +1,37 @@
+{
+  "name": "mockroom-video",
+  "private": true,
+  "description": "Mockroom's promo video and README loop, made with Remotion. Not part of the mockroom npm package.",
+  "license": "MIT",
+  "type": "module",
+  "scripts": {
+    "studio": "npm run sfx && npm run mix && remotion studio",
+    "sfx": "tsx scripts/synth-sfx.ts",
+    "render:film": "remotion render Film out/mockroom-promo.mp4 --codec=h264 --crf=17",
+    "render:film-fr": "remotion render Film-FR out/mockroom-promo-fr.mp4 --codec=h264 --crf=17",
+    "render:loop": "remotion render ReadmeLoop out/mockroom-loop.mp4 --codec=h264 --crf=20",
+    "render:gif": "remotion render ReadmeLoop out/mockroom-loop.gif --codec=gif --every-nth-frame=3 --scale=0.5",
+    "render": "npm run sfx && npm run mix && npm run render:film && npm run render:film-fr && npm run render:loop && npm run render:gif",
+    "stills": "node scripts/stills.mjs",
+    "cues": "tsx scripts/export-cues.ts",
+    "typecheck": "tsc --noEmit",
+    "mix": "tsx scripts/mix.ts",
+    "check-timing": "tsx scripts/check-timing.ts"
+  },
+  "dependencies": {
+    "@remotion/cli": "4.0.536",
+    "@remotion/google-fonts": "4.0.536",
+    "@remotion/motion-blur": "4.0.536",
+    "@remotion/noise": "4.0.536",
+    "@remotion/paths": "4.0.536",
+    "react": "19.2.0",
+    "react-dom": "19.2.0",
+    "remotion": "4.0.536"
+  },
+  "devDependencies": {
+    "@types/node": "22.19.0",
+    "@types/react": "19.2.2",
+    "tsx": "4.20.6",
+    "typescript": "5.9.3"
+  }
+}

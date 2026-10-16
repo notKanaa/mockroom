@@ -1,0 +1,93 @@
+/*
+ * The app's real stylesheet, so the UI shots use its exact classes and tokens.
+ * Its own motion runs on the wall clock, which Remotion can't capture frame by
+ * frame: it is switched off inside the shots, and the video drives every move itself.
+ */
+@import "../../../src/ui/styles.css";
+
+body {
+  background: transparent;
+}
+
+.mr-ui,
+.mr-ui *,
+.mr-ui *::before,
+.mr-ui *::after {
+  animation: none !important;
+  transition: none !important;
+}
+
+.mr-ui {
+  font-family: var(--font);
+  font-size: 16px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  background: var(--bg);
+  color: var(--text);
+}
+
+/* The box being typed in, as when it has the focus. */
+.mr-ui .prompt.is-focused,
+.mr-ui .composer.is-focused {
+  border-color: var(--accent);
+}
+
+.mr-ui .prompt.is-focused::before,
+.mr-ui .composer.is-focused::before {
+  opacity: 1;
+}
+
+/* A typed text in the boxes: a div instead of a textarea, so it can carry a caret. */
+.mr-ui .mr-textarea {
+  min-height: 104px;
+  padding: var(--s4) var(--s4) 0;
+  font-size: var(--fs-md);
+  line-height: 1.5;
+  white-space: pre-wrap;
+  overflow: hidden;
+}
+
+.mr-ui .composer .mr-textarea {
+  min-height: 52px;
+}
+
+.mr-ui .mr-placeholder {
+  color: var(--muted);
+}
+
+.mr-ui .mr-caret {
+  display: inline-block;
+  width: 2px;
+  height: 1.15em;
+  margin-left: 1px;
+  background: var(--accent);
+  vertical-align: text-bottom;
+}
+
+/* The streaming caret, its breathing driven by the video. */
+.mr-ui .streaming::after {
+  opacity: var(--caret, 1);
+}
+
+/* The shimmer of "is thinking…", driven by the video. */
+.mr-ui .ui-thinking-label {
+  background-position: var(--shimmer, 50%) 0;
+}
+
+/* The ring around the recruiter's avatar while they write, driven by the video. */
+.mr-ui .avatar-thinking {
+  box-shadow:
+    0 0 0 2px var(--bg),
+    0 0 0 4px color-mix(in srgb, var(--accent) var(--ring, 50%), var(--accent-soft));
+}
+
+/* A provider logo at any size. */
+.mr-logo {
+  display: inline-grid;
+  place-items: center;
+}
+
+.mr-logo svg {
+  width: 100%;
+  height: 100%;
+}
