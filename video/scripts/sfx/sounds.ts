@@ -286,4 +286,133 @@ export const sounds: Record<string, () => Sound> = {
     });
     return master(reverb(sound, 0.4, 0.85, 1), -9);
   },
+
+  // Part 2
+
+  // A light 120 BPM groove under the product part: soft kick, off-beat hats, a plucked bass, a chord stab per bar.
+  groove: () => {
+    const beat = 0.5;
+    const beats = 22;
+    const length = beats * beat + 1;
+    const sound = silence(length);
+    const bass = [36, 36, 43, 45];
+    for (let index = 0; index < beats; index++) {
+      const at = index * beat;
+      const bar = Math.floor(index / 4);
+      add(sound, boom(70, 44, 0.09, 0.05, 300 + index), at, 0.55);
+      add(sound, shape(filter(noise(0.08, 400 + index), "hp", () => 7000), hit(0.001, 0.018)), at + beat / 2, 0.22, index % 2 ? 0.3 : -0.3);
+      if (index % 2 === 1) add(sound, shape(filter(noise(0.05, 500 + index), "hp", () => 9000), hit(0.001, 0.01)), at + beat * 0.75, 0.1, 0.5);
+      const root = note(bass[bar % 4]!);
+      add(sound, shape(filter(osc(0.4, () => root, "saw"), "lp", (t) => 300 + 1600 * Math.exp(-t / 0.05), 1.2), hit(0.004, 0.16)), at, 0.32);
+      if (index % 4 === 0) {
+        const chord = [60, 64, 67, 71].map((midi) => midi + (bass[bar % 4]! - 36));
+        chord.forEach((midi, voice) => add(sound, mallet(note(midi), 0.3), at + voice * 0.012, 0.12, voice % 2 ? 0.35 : -0.35));
+      }
+    }
+    // Fades in over the first beat, and out at the end.
+    const fade = (index: number, total: number) => Math.min(1, index / 48000 / 0.4) * Math.min(1, (total - index) / 48000 / 0.8);
+    sound.left = sound.left.map((value, index) => value * fade(index, sound.left.length));
+    sound.right = sound.right.map((value, index) => value * fade(index, sound.right.length));
+    return master(sound, -3);
+  },
+
+  // The price lands on $0: two bright notes up, a little win.
+  "free-chime": () => {
+    const sound = silence(1.6);
+    add(sound, mallet(note(79), 0.35), 0, 0.6, -0.2);
+    add(sound, mallet(note(84), 0.5), 0.08, 0.7, 0.2);
+    return master(reverb(sound, 0.35, 0.82, 1), -2);
+  },
+
+  // Braces clapping together.
+  clap: () => {
+    const sound = silence(0.7);
+    add(sound, shape(filter(noise(0.2, 600), "bp", () => 1300, 1.1), hit(0.001, 0.03)), 0, 1);
+    add(sound, shape(filter(noise(0.2, 601), "bp", () => 1300, 1.1), hit(0.001, 0.025)), 0.012, 0.7);
+    add(sound, boom(180, 90, 0.05, 0.2, 602), 0, 0.5);
+    return master(reverb(sound, 0.25, 0.7, 0.4), -2);
+  },
+
+  // A toggle switching.
+  toggle: () => {
+    const sound = silence(0.3);
+    add(sound, tick(2600, 610, 0.03), 0, 0.8);
+    add(sound, tick(1300, 611, 0.03), 0.045, 0.6);
+    return master(sound, -4);
+  },
+
+  // A card flipping: a short, papery swish.
+  flip: () => master(whoosh(0.22, 1500, 5000, -0.3, 0.3, 620, 0.5), -5),
+
+  // The small window growing into the app: a rising swell.
+  expand: () => {
+    const sound = whoosh(0.8, 250, 4200, 0, 0, 630, 0.75);
+    add(sound, shape(osc(0.8, (t) => 300 * (900 / 300) ** (t / 0.8)), swell(0.8, 0.8, 2)), 0, 0.12);
+    return master(sound, -2);
+  },
+
+  // A sheet of paper flying in.
+  "paper-fly": () => {
+    const length = 1;
+    const sound = whoosh(length, 700, 2400, 1, 0, 640, 0.7);
+    const flutter = shape(filter(noise(length, 641), "hp", () => 3000), (t) => swell(length, 0.7, 2)(t) * (0.5 + 0.5 * Math.sin(t * 90)));
+    add(sound, flutter, 0, 0.35, (t) => 1 - t);
+    return master(sound, -3);
+  },
+
+  // The sheet landing: a soft slap.
+  "paper-land": () => {
+    const sound = silence(0.5);
+    add(sound, shape(filter(noise(0.2, 650), "bp", () => 900, 0.8), hit(0.001, 0.04)), 0, 1);
+    add(sound, boom(120, 70, 0.05, 0.1, 651), 0, 0.5);
+    return master(sound, -3);
+  },
+
+  // A mouse click.
+  click: () => {
+    const sound = silence(0.2);
+    add(sound, tick(3200, 660, 0.02), 0, 0.9);
+    add(sound, tick(2100, 661, 0.02), 0.04, 0.5);
+    return master(sound, -4);
+  },
+
+  // The AI reading: a soft digital sweep, back and forth.
+  scan: () => {
+    const length = 1.9;
+    const sound = silence(length);
+    const sweep = (t: number) => 900 + 700 * Math.sin(t * 4.2);
+    const level = (t: number) => Math.min(1, t / 0.2) * Math.min(1, (length - t) / 0.3);
+    add(sound, shape(filter(noise(length, 670), "bp", sweep, 6), (t) => 0.5 * level(t)), 0, 1, (t) => Math.sin(t * 4.2) * 0.6);
+    add(sound, shape(osc(length, (t) => sweep(t) * 2), (t) => 0.05 * level(t)), 0, 1);
+    return master(sound, -9);
+  },
+
+  // A word being marked: a highlighter swipe and a bright blip.
+  mark: () => {
+    const sound = silence(0.5);
+    add(sound, shape(filter(noise(0.15, 680), "bp", (t) => 1800 + t * 20000, 2), swell(0.15, 0.6, 1.5)), 0, 0.6);
+    add(sound, mallet(note(88), 0.12), 0.1, 0.5);
+    return master(sound, -3);
+  },
+
+  // A chip lifting off and flying: a small whoosh.
+  "chip-fly": () => master(whoosh(0.45, 1200, 4000, -0.4, 0.4, 690, 0.6), -5),
+
+  // A chip landing: a soft pop.
+  "chip-land": () => {
+    const sound = silence(0.4);
+    add(sound, shape(osc(0.15, (t) => 500 + 900 * Math.exp(-t / 0.02)), hit(0.002, 0.04)), 0, 0.8);
+    add(sound, tick(2400, 700, 0.03), 0, 0.4);
+    return master(sound, -3);
+  },
+
+  // A screen changing.
+  swap: () => master(whoosh(0.35, 3000, 600, 0.3, -0.3, 710, 0.4), -5),
+
+  // A whip pan: a fast, wide whoosh.
+  whip: () => {
+    const sound = whoosh(0.4, 600, 6000, 0.8, -0.8, 720, 0.55);
+    layer(sound, whoosh(0.4, 400, 3000, 0.6, -0.6, 721, 0.5), 0, 0.7);
+    return master(sound, -1);
+  },
 };

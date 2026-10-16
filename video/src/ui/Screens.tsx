@@ -83,6 +83,29 @@ export interface HomeState {
   detecting: boolean;
   shimmer: number;
   pressSend: number;
+  /** Words of the text to mark, each anchored as `term-<index>`, and how far each marker has swept (0 → 1). */
+  terms?: string[];
+  marks?: number[];
+  /** 0 → 1: a reading band sweeping down the text, or undefined when there is none. */
+  scan?: number;
+}
+
+/** Splits a text around the first occurrence of each term, in reading order. */
+function splitTerms(text: string, terms: string[]): { text: string; term?: number }[] {
+  const found = terms
+    .map((term, index) => ({ index, at: text.indexOf(term), term }))
+    .filter((match) => match.at >= 0)
+    .sort((left, right) => left.at - right.at);
+  const parts: { text: string; term?: number }[] = [];
+  let cursor = 0;
+  for (const match of found) {
+    if (match.at < cursor) continue;
+    parts.push({ text: text.slice(cursor, match.at) });
+    parts.push({ text: match.term, term: match.index });
+    cursor = match.at + match.term.length;
+  }
+  parts.push({ text: text.slice(cursor) });
+  return parts;
 }
 
 export function HomeScreen({ content, state }: { content: Content; state: HomeState }) {
@@ -99,7 +122,21 @@ export function HomeScreen({ content, state }: { content: Content; state: HomeSt
         </p>
 
         <form className={`prompt${state.focused ? " is-focused" : ""}`} style={rise(prompt)} data-anchor="prompt">
-          <div className="mr-textarea" data-anchor="prompt-text">
+          <div className="mr-textarea" data-anchor="prompt-text" style={{ position: "relative" }}>
+            {state.scan !== undefined && state.scan > 0 && state.scan < 1 && (
+              <span
+                style={{
+                  position: "absolute",
+                  left: 0,
+                  right: 0,
+                  top: `calc(${state.scan * 100}% - 24px)`,
+                  height: 48,
+                  background: "linear-gradient(transparent, color-mix(in srgb, var(--accent) 22%, transparent), transparent)",
+                  borderBottom: "1.5px solid color-mix(in srgb, var(--accent) 70%, transparent)",
+                  pointerEvents: "none",
+                }}
+              />
+            )}
             {state.text === "" ? (
               <>
                 <Caret on={state.caret} />
@@ -112,7 +149,26 @@ export function HomeScreen({ content, state }: { content: Content; state: HomeSt
                     background: `color-mix(in srgb, var(--accent-soft) ${Math.round(state.pasteFlash * 100)}%, transparent)`,
                   }}
                 >
-                  {state.text}
+                  {splitTerms(state.text, state.terms ?? []).map((part, index) =>
+                    part.term === undefined ? (
+                      part.text
+                    ) : (
+                      <span
+                        key={index}
+                        data-anchor={`term-${part.term}`}
+                        style={{
+                          borderRadius: 4,
+                          backgroundImage: "linear-gradient(var(--accent-soft), var(--accent-soft))",
+                          backgroundRepeat: "no-repeat",
+                          backgroundSize: `${(state.marks?.[part.term] ?? 0) * 100}% 100%`,
+                          color: (state.marks?.[part.term] ?? 0) > 0.5 ? "var(--accent-text)" : undefined,
+                          fontWeight: (state.marks?.[part.term] ?? 0) > 0.5 ? 600 : undefined,
+                        }}
+                      >
+                        {part.text}
+                      </span>
+                    ),
+                  )}
                 </span>
                 <Caret on={state.caret} />
               </>
@@ -198,7 +254,12 @@ export function SetupScreen({ content, state }: { content: Content; state: Setup
               <p className="field-label">{ui.setup.technologies}</p>
               <ul className="chips chips-start technologies" data-anchor="technologies">
                 {sample.technologies.map((technology, index) => (
-                  <li key={technology.name} className="chip technology" style={pop(state.technologies[index] ?? 0)}>
+                  <li
+                    key={technology.name}
+                    className="chip technology"
+                    data-anchor={`chip-${index}`}
+                    style={pop(state.technologies[index] ?? 0)}
+                  >
                     <span className={`status-dot ${technology.covered ? "status-dot-covered" : "status-dot-uncurated"}`} />
                     {technology.name}
                     <button type="button" className="chip-remove">

@@ -75,7 +75,7 @@ export function UiViewport({ width, height, scale, camera, theme = "light", onAn
 }
 
 /** Keeps the camera inside the UI, so the frame never shows past its edges. */
-function clampCamera(camera: Camera, width: number, height: number): Camera {
+export function clampCamera(camera: Camera, width: number, height: number): Camera {
   const s = Math.max(1, camera.s);
   const halfW = width / (2 * s);
   const halfH = height / (2 * s);
