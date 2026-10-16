@@ -1,20 +1,30 @@
 import { useEffect, useState, type FormEvent } from "react";
 import type { InterviewRequest, Language, PackLevel, PackSummary, TechnologyMatch } from "../server/api-types";
 import { sameTechnology } from "../server/packs/technology";
-import { detectJobOffer, matchPacks } from "./api";
-import { interviewTitle, languages, useI18n } from "./i18n";
+import { matchPacks } from "./api";
+import { LanguagePicker } from "./Home";
+import { useI18n } from "./i18n";
+import { PlusIcon } from "./Icons";
+import { Button, Card, Dropdown, Hint, PageHeader } from "./kit";
 import { PackPicker } from "./PackPicker";
 
 interface InterviewSetupProps {
   packs: PackSummary[];
+  /** What the job offer asks for, or null when the candidate picks packs by hand. */
+  initialDetection: Detection | null;
+  /** The packs matching the job offer when it was read. */
+  initialIds: string[];
+  interviewLanguage: Language;
+  onLanguageChange: (language: Language) => void;
   starting: boolean;
   onStart: (request: InterviewRequest) => void;
+  onBack: () => void;
 }
 
 const levels: readonly PackLevel[] = ["junior", "mid", "senior"];
 
 /** The technologies and level from a job offer, as the candidate confirmed or edited them. */
-interface Detection {
+export interface Detection {
   technologies: string[];
   level: PackLevel;
 }
@@ -26,23 +36,29 @@ interface Selection {
 }
 
 /**
- * Sets up an interview: its language, an optional job offer whose technologies
- * and level the candidate checks, and the packs. Packs matching the job offer
- * are added automatically; technologies no added pack covers are uncurated.
+ * Checks an interview before it starts: the technologies and level read from a
+ * job offer, which the candidate can edit, and the packs. Packs matching the job
+ * offer are added automatically; technologies no added pack covers are uncurated.
+ * Without a job offer, the candidate combines packs by hand here.
  */
-export function InterviewSetup({ packs, starting, onStart }: InterviewSetupProps) {
-  const { language, t } = useI18n();
-  // Follows the interface language until the candidate picks one.
-  const [pickedLanguage, setPickedLanguage] = useState<Language | null>(null);
-  const interviewLanguage = pickedLanguage ?? language;
-
-  const [jobOffer, setJobOffer] = useState("");
-  const [detecting, setDetecting] = useState(false);
-  const [detectError, setDetectError] = useState<string | null>(null);
-  const [detection, setDetection] = useState<Detection | null>(null);
+export function InterviewSetup({
+  packs,
+  initialDetection,
+  initialIds,
+  interviewLanguage,
+  onLanguageChange,
+  starting,
+  onStart,
+  onBack,
+}: InterviewSetupProps) {
+  const { t } = useI18n();
+  const [detection, setDetection] = useState<Detection | null>(initialDetection);
   // What the current matches were made for: technologies, level and interview language.
-  const [matchedKey, setMatchedKey] = useState<string | null>(null);
-  const [selection, setSelection] = useState<Selection>({ ids: [], matched: [] });
+  const [matchedKey, setMatchedKey] = useState<string | null>(
+    initialDetection && keyOf(initialDetection, interviewLanguage),
+  );
+  const [selection, setSelection] = useState<Selection>({ ids: initialIds, matched: initialIds });
+  const [showPicker, setShowPicker] = useState(initialDetection === null);
 
   const selectedPacks = selection.ids
     .map((id) => packs.find((pack) => pack.id === id))
@@ -64,7 +80,7 @@ export function InterviewSetup({ packs, starting, onStart }: InterviewSetupProps
   }
 
   // Matches the packs again whenever the candidate edits the detection or changes the interview language.
-  const matchKey = detection ? JSON.stringify([detection.technologies, detection.level, interviewLanguage]) : null;
+  const matchKey = detection ? keyOf(detection, interviewLanguage) : null;
   useEffect(() => {
     if (!detection || matchKey === null || matchedKey === matchKey) return;
     let current = true;
@@ -79,29 +95,6 @@ export function InterviewSetup({ packs, starting, onStart }: InterviewSetupProps
       current = false;
     };
   }, [matchKey]);
-
-  async function detect(event: FormEvent) {
-    event.preventDefault();
-    if (jobOffer.trim() === "" || detecting) return;
-    setDetectError(null);
-    setDetecting(true);
-    try {
-      const result = await detectJobOffer(jobOffer, interviewLanguage);
-      setDetection({ technologies: result.technologies, level: result.level });
-      applyMatches(JSON.stringify([result.technologies, result.level, interviewLanguage]), result.matches);
-    } catch (failure) {
-      setDetectError(failure instanceof Error ? failure.message : String(failure));
-    } finally {
-      setDetecting(false);
-    }
-  }
-
-  function forgetJobOffer() {
-    setDetection(null);
-    setMatchedKey(null);
-    setDetectError(null);
-    setSelection((current) => ({ ids: current.ids.filter((id) => !current.matched.includes(id)), matched: [] }));
-  }
 
   function togglePack(packId: string) {
     setSelection((current) =>
@@ -123,88 +116,84 @@ export function InterviewSetup({ packs, starting, onStart }: InterviewSetupProps
 
   return (
     <div className="setup">
-      <fieldset className="interview-language">
-        <legend>{t.setup.interviewLanguage}</legend>
-        <div className="language-choices">
-          {languages.map((option) => (
-            <label
-              key={option}
-              className={`language-choice${option === interviewLanguage ? " language-choice-current" : ""}`}
-            >
-              <input
-                type="radio"
-                name="interview-language"
-                value={option}
-                checked={option === interviewLanguage}
-                onChange={() => setPickedLanguage(option)}
-              />
-              {t.languageNames[option]}
-            </label>
-          ))}
-        </div>
-        <p className="field-hint">{t.setup.interviewLanguageHint}</p>
-      </fieldset>
-
-      <section className="job-offer" aria-labelledby="job-offer-title">
-        <h2 id="job-offer-title">{t.setup.jobOfferTitle}</h2>
-        <p className="field-hint">{t.setup.jobOfferHint}</p>
-        <form onSubmit={detect}>
-          <textarea
-            value={jobOffer}
-            onChange={(event) => setJobOffer(event.target.value)}
-            placeholder={t.setup.jobOfferPlaceholder}
-            aria-label={t.setup.jobOfferLabel}
-            rows={5}
-            disabled={detecting}
-          />
-          <div className="job-offer-actions">
-            {detection && (
-              <button type="button" className="link-button" onClick={forgetJobOffer}>
-                {t.setup.forget}
-              </button>
-            )}
-            <button type="submit" className="secondary-button" disabled={detecting || jobOffer.trim() === ""}>
-              {detecting ? t.setup.detecting : t.setup.detect}
-            </button>
-          </div>
-        </form>
-        {detectError && (
-          <p className="field-error" role="alert">
-            {detectError}
-          </p>
-        )}
-
-        {detection && (
-          <DetectionEditor
-            detection={detection}
-            selectedPacks={selectedPacks}
-            onChange={setDetection}
-          />
-        )}
-      </section>
-
-      <PackPicker
-        packs={packs}
-        selectedIds={selection.ids}
-        onToggle={togglePack}
-        interviewLanguage={interviewLanguage}
+      <PageHeader
+        back={{ label: detection ? t.review.back : t.review.backHome, onClick: onBack }}
+        title={detection ? t.review.title : t.review.buildTitle}
+        intro={detection ? t.setup.detectedHint : t.review.buildHint}
       />
 
-      <section className="setup-summary" aria-labelledby="setup-summary-title">
+      {detection && <DetectionEditor detection={detection} selectedPacks={selectedPacks} onChange={setDetection} />}
+
+      <Card title={t.review.packsTitle} id="setup-packs-title">
+        {selectedPacks.length === 0 ? (
+          <Hint>{t.review.noPacks}</Hint>
+        ) : (
+          <ul className="chips chips-start">
+            {selectedPacks.map((pack) => (
+              <li key={pack.id} className="chip chip-selected">
+                {pack.title}
+                <button
+                  type="button"
+                  className="chip-remove"
+                  aria-label={t.review.removePack(pack.title)}
+                  title={t.review.removePack(pack.title)}
+                  onClick={() => togglePack(pack.id)}
+                >
+                  ×
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
         <div>
-          <h2 id="setup-summary-title">{t.setup.summaryTitle}</h2>
-          <p className="setup-summary-text" aria-live="polite">
+          <Button
+            variant="ghost"
+            size="sm"
+            icon={showPicker ? undefined : <PlusIcon />}
+            aria-expanded={showPicker}
+            aria-controls="setup-picker"
+            onClick={() => setShowPicker((shown) => !shown)}
+          >
+            {showPicker ? t.review.hidePacks : t.review.addPacks}
+          </Button>
+        </div>
+        {showPicker && (
+          <div id="setup-picker">
+            <PackPicker
+              packs={packs}
+              selectedIds={selection.ids}
+              onToggle={togglePack}
+              interviewLanguage={interviewLanguage}
+            />
+          </div>
+        )}
+      </Card>
+
+      <section className="setup-summary" aria-labelledby="setup-summary-title">
+        <div className="setup-summary-text">
+          <h2 id="setup-summary-title" className="setup-summary-label">
+            {t.setup.summaryTitle}
+          </h2>
+          <p aria-live="polite">
             {nothingChosen
               ? t.setup.nothingChosen
-              : `${interviewTitle({ packs: selectedPacks, uncurated }, t)} · ${t.languageNames[interviewLanguage]}`}
+              : [
+                  ...selectedPacks.map((pack) => pack.title),
+                  ...(uncurated.length > 0 ? [t.setup.uncuratedCount(uncurated.length)] : []),
+                ].join(" + ")}
           </p>
         </div>
-        <button type="button" disabled={starting || nothingChosen} onClick={start}>
+        <LanguagePicker value={interviewLanguage} onChange={onLanguageChange} placement="up" />
+        <Button variant="primary" loading={starting} disabled={nothingChosen} onClick={start}>
           {starting ? t.setup.starting : t.setup.start}
-        </button>
+        </Button>
       </section>
     </div>
   );
+}
+
+function keyOf(detection: Detection, language: Language): string {
+  return JSON.stringify([detection.technologies, detection.level, language]);
 }
 
 interface DetectionEditorProps {
@@ -232,75 +221,75 @@ function DetectionEditor({ detection, selectedPacks, onChange }: DetectionEditor
     onChange({ ...detection, technologies: detection.technologies.filter((known) => known !== technology) });
   }
 
-  const anyUncurated = detection.technologies.some(
-    (technology) => !selectedPacks.some((pack) => sameTechnology(pack.technology, technology)),
-  );
+  const covered = (technology: string) =>
+    selectedPacks.filter((pack) => sameTechnology(pack.technology, technology)).map((pack) => pack.title);
+  const anyCovered = detection.technologies.some((technology) => covered(technology).length > 0);
+  const anyUncurated = detection.technologies.some((technology) => covered(technology).length === 0);
 
   return (
-    <div className="detection">
-      <h3>{t.setup.detectedTitle}</h3>
-      <p className="field-hint">{t.setup.detectedHint}</p>
-
-      <p className="detection-label">{t.setup.technologies}</p>
-      {detection.technologies.length === 0 ? (
-        <p className="field-hint">{t.setup.noTechnology}</p>
-      ) : (
-        <ul className="technologies">
-          {detection.technologies.map((technology) => {
-            const covering = selectedPacks.filter((pack) => sameTechnology(pack.technology, technology));
-            return (
-              <li key={technology} className={covering.length > 0 ? "technology" : "technology technology-uncurated"}>
-                <span className="technology-name">{technology}</span>
-                {covering.length > 0 ? (
-                  <span className="technology-pack">
-                    {t.setup.coveredBy(covering.map((pack) => pack.title).join(", "))}
-                  </span>
-                ) : (
-                  <span className="uncurated-badge">{t.common.uncurated}</span>
-                )}
-                <button
-                  type="button"
-                  className="technology-remove"
-                  aria-label={t.setup.remove(technology)}
-                  title={t.setup.remove(technology)}
-                  onClick={() => remove(technology)}
-                >
-                  ×
-                </button>
-              </li>
-            );
-          })}
+    <Card title={t.setup.detectedTitle} id="detection-title" className="detection">
+      <p className="field-label">{t.setup.technologies}</p>
+      <ul className="chips chips-start technologies">
+        {detection.technologies.map((technology) => {
+          const packs = covered(technology);
+          const status = packs.length > 0 ? t.setup.coveredBy(packs.join(", ")) : t.common.uncurated;
+          return (
+            <li key={technology} className="chip technology" title={status}>
+              <span className={`status-dot ${packs.length > 0 ? "status-dot-covered" : "status-dot-uncurated"}`} />
+              {technology}
+              <span className="visually-hidden">({status})</span>
+              <button
+                type="button"
+                className="chip-remove"
+                aria-label={t.setup.remove(technology)}
+                title={t.setup.remove(technology)}
+                onClick={() => remove(technology)}
+              >
+                ×
+              </button>
+            </li>
+          );
+        })}
+        <li>
+          <form className="technology-add" onSubmit={add}>
+            <input
+              value={newTechnology}
+              onChange={(event) => setNewTechnology(event.target.value)}
+              placeholder={t.setup.addPlaceholder}
+              aria-label={t.setup.addTechnology}
+              maxLength={40}
+            />
+          </form>
+        </li>
+      </ul>
+      {detection.technologies.length === 0 && <Hint>{t.setup.noTechnology}</Hint>}
+      {(anyCovered || anyUncurated) && (
+        <ul className="legend" aria-hidden="true">
+          {anyCovered && (
+            <li>
+              <span className="status-dot status-dot-covered" />
+              {t.setup.legendCovered}
+            </li>
+          )}
+          {anyUncurated && (
+            <li>
+              <span className="status-dot status-dot-uncurated" />
+              {t.setup.legendUncurated}
+            </li>
+          )}
         </ul>
       )}
-      {anyUncurated && <p className="field-hint">{t.setup.uncuratedHint}</p>}
 
-      <form className="field-row technology-add" onSubmit={add}>
-        <input
-          value={newTechnology}
-          onChange={(event) => setNewTechnology(event.target.value)}
-          placeholder={t.setup.addPlaceholder}
-          aria-label={t.setup.addTechnology}
-          maxLength={40}
-        />
-        <button type="submit" className="secondary-button" disabled={newTechnology.trim() === ""}>
-          {t.setup.add}
-        </button>
-      </form>
-
-      <label className="field detection-level">
-        <span className="detection-label">{t.setup.level}</span>
-        <select
+      <div className="level-row">
+        <span className="field-label">{t.setup.level}</span>
+        <Dropdown
+          label={t.setup.level}
           value={detection.level}
-          onChange={(event) => onChange({ ...detection, level: event.target.value as PackLevel })}
-        >
-          {levels.map((level) => (
-            <option key={level} value={level}>
-              {t.levels[level]}
-            </option>
-          ))}
-        </select>
-      </label>
-      <p className="field-hint">{t.setup.levelHint}</p>
-    </div>
+          onChange={(level) => onChange({ ...detection, level })}
+          options={levels.map((level) => ({ value: level, label: t.levels[level] }))}
+        />
+      </div>
+      <Hint>{t.setup.levelHint}</Hint>
+    </Card>
   );
 }

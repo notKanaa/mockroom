@@ -1,6 +1,11 @@
 import { useEffect, useRef, type FormEvent, type KeyboardEvent } from "react";
 import { interviewTitle, useI18n } from "./i18n";
+import { ArrowUpIcon } from "./Icons";
+import { Banner, Button, IconButton, Thinking } from "./kit";
 import { Message } from "./Message";
+import { ModelPicker } from "./ModelPicker";
+import { RecruiterBadge, recruiterFor } from "./Recruiter";
+import { useAutoGrow } from "./useAutoGrow";
 import type { useInterview } from "./useInterview";
 
 interface InterviewRoomProps {
@@ -9,23 +14,56 @@ interface InterviewRoomProps {
   onOpenSettings: () => void;
 }
 
+/**
+ * The interview itself, in focus mode: only the recruiter, the conversation,
+ * the answer box and a discreet way out.
+ */
 export function InterviewRoom({ session, onOpenSettings }: InterviewRoomProps) {
   const { interview, messages, streaming, error, ending, endError, debrief, draft, setDraft } = session;
   const { t } = useI18n();
-  const chatRef = useRef<HTMLOListElement>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const columnRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const finished = interview?.status === "finished";
+  useAutoGrow(inputRef, draft);
 
   useEffect(() => {
-    const chat = chatRef.current;
-    if (chat) chat.scrollTop = chat.scrollHeight;
-  }, [messages]);
+    const scroller = scrollRef.current;
+    if (scroller) scroller.scrollTop = scroller.scrollHeight;
+  }, [messages, finished, debrief.error]);
 
   useEffect(() => {
-    if (!streaming) inputRef.current?.focus();
+    // Streamed text is revealed a little every frame (see Message), after `messages` changed:
+    // the conversation keeps following it down, unless the candidate scrolled up to read.
+    const scroller = scrollRef.current;
+    const column = columnRef.current;
+    if (!scroller || !column) return;
+    let atBottom = true;
+    const onScroll = () => {
+      atBottom = scroller.scrollHeight - scroller.scrollTop - scroller.clientHeight < 48;
+    };
+    const observer = new ResizeObserver(() => {
+      if (atBottom) scroller.scrollTop = scroller.scrollHeight;
+    });
+    scroller.addEventListener("scroll", onScroll, { passive: true });
+    observer.observe(column);
+    return () => {
+      scroller.removeEventListener("scroll", onScroll);
+      observer.disconnect();
+    };
+  }, []);
+
+  useEffect(() => {
+    // The page may have been scrolled on the screen before; the room starts at the top.
+    window.scrollTo(0, 0);
+  }, []);
+
+  useEffect(() => {
+    if (!streaming) inputRef.current?.focus({ preventScroll: true });
   }, [streaming]);
 
   if (!interview) return null;
+  const recruiter = recruiterFor(interview.id, t);
 
   async function submit(event?: FormEvent) {
     event?.preventDefault();
@@ -55,98 +93,116 @@ export function InterviewRoom({ session, onOpenSettings }: InterviewRoomProps) {
   return (
     <main className="room">
       <header className="room-header">
-        <div className="room-heading">
-          <div>
-            <p className="room-pack">
-              {interviewTitle(interview, t)} · {t.languageNames[interview.language]}
-            </p>
-            <p className="room-progress" aria-live="polite">
-              {progress}
-            </p>
-          </div>
-          {!finished && (
-            <button type="button" className="secondary-button" onClick={confirmEnd} disabled={streaming || ending}>
-              {ending ? t.room.ending : t.room.end}
-            </button>
-          )}
-        </div>
-        <div
-          className="progress"
-          role="progressbar"
-          aria-label={t.room.progressLabel}
-          aria-valuemin={0}
-          aria-valuemax={totalQuestions}
-          aria-valuenow={finished ? totalQuestions : questionNumber}
-        >
-          <div
-            className="progress-fill"
-            style={{ width: `${((finished ? totalQuestions : questionNumber) / totalQuestions) * 100}%` }}
-          />
-        </div>
+        <RecruiterBadge
+          recruiter={recruiter}
+          detail={`${interviewTitle(interview, t)} · ${t.languageNames[interview.language]}`}
+          thinking={streaming}
+        />
+        <p className="room-progress" aria-live="polite">
+          {/* A new key on each step, so the new line arrives with its own motion. */}
+          <span key={progress} className="room-progress-text">
+            {progress}
+          </span>
+        </p>
+        {!finished && (
+          <Button variant="ghost" size="sm" onClick={confirmEnd} disabled={streaming || ending}>
+            {ending ? t.room.ending : t.room.end}
+          </Button>
+        )}
       </header>
 
-      <ol ref={chatRef} className="chat" aria-label={t.room.conversation}>
-        {messages.map((message, index) => {
-          const isTyping = streaming && index === messages.length - 1 && message.role === "interviewer";
-          return <Message key={index} message={message} typing={isTyping} />;
-        })}
-      </ol>
+      <div className="room-scroll" ref={scrollRef}>
+        <div className="room-column" ref={columnRef}>
+          <ol className="chat" aria-label={t.room.conversation}>
+            {messages.map((message, index) => {
+              const isTyping = streaming && index === messages.length - 1 && message.role === "interviewer";
+              return <Message key={index} message={message} recruiter={recruiter} typing={isTyping} />;
+            })}
+            {/* Until the recruiter's reply starts, their message is just the typing dots. */}
+            {streaming && messages.at(-1)?.role === "candidate" && (
+              <Message message={{ role: "interviewer", content: "" }} recruiter={recruiter} typing />
+            )}
+          </ol>
 
-      {error && (
-        <p className="room-error" role="alert">
-          {error} {t.room.notSent}{" "}
-          <button type="button" className="link-button" onClick={onOpenSettings}>
-            {t.common.openSettings}
-          </button>
-        </p>
-      )}
-      {endError && (
-        <p className="room-error" role="alert">
-          {endError} {t.room.stillGoing}
-        </p>
-      )}
-
-      {finished ? (
-        <footer className="room-footer room-done" aria-live="polite">
-          {debrief.error ? (
-            <>
-              <p className="room-done-error" role="alert">
-                {debrief.error}
-              </p>
-              <div className="room-done-actions">
-                <button type="button" className="secondary-button" onClick={session.reset}>
-                  {t.common.backToPacks}
-                </button>
-                <button type="button" className="secondary-button" onClick={onOpenSettings}>
-                  {t.common.settings}
-                </button>
-                <button type="button" onClick={session.retryDebrief}>
-                  {t.room.tryAgain}
-                </button>
-              </div>
-            </>
-          ) : (
-            <p className="typing">{t.room.writingDebrief}</p>
+          {error && (
+            <Banner tone="error">
+              {error} {t.room.notSent}{" "}
+              <button type="button" className="ui-link" onClick={onOpenSettings}>
+                {t.common.openSettings}
+              </button>
+            </Banner>
           )}
-        </footer>
-      ) : (
-        <form className="room-footer composer" onSubmit={submit}>
-          <textarea
-            ref={inputRef}
-            value={draft}
-            onChange={(event) => setDraft(event.target.value)}
-            onKeyDown={onKeyDown}
-            placeholder={streaming ? t.room.interviewerWriting : t.room.typeAnswer}
-            aria-label={t.room.yourAnswer}
-            rows={3}
-            disabled={streaming}
-          />
-          <div className="composer-actions">
-            <span className="composer-hint">{t.room.composerHint}</span>
-            <button type="submit" disabled={streaming || draft.trim() === ""}>
-              {t.room.send}
-            </button>
+          {endError && (
+            <Banner tone="error">
+              {endError} {t.room.stillGoing}
+            </Banner>
+          )}
+
+          {finished && (
+            <div className="room-done" aria-live="polite">
+              {debrief.error ? (
+                <>
+                  <Banner tone="error">{debrief.error}</Banner>
+                  <div className="button-row">
+                    <Button variant="primary" onClick={session.retryDebrief}>
+                      {t.room.tryAgain}
+                    </Button>
+                    <Button onClick={onOpenSettings}>{t.common.settings}</Button>
+                    <Button variant="ghost" onClick={session.reset}>
+                      {t.common.newInterview}
+                    </Button>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <p className="room-writing">
+                    <Thinking label={t.room.writingDebrief} />
+                  </p>
+                  {/* The shape of the debrief to come. */}
+                  <div className="skeleton" aria-hidden="true">
+                    <span />
+                    <span />
+                    <span />
+                  </div>
+                  <div className="skeleton" aria-hidden="true">
+                    <span />
+                    <span />
+                  </div>
+                </>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {!finished && (
+        <form className="composer-dock" onSubmit={submit}>
+          <div className="composer">
+            <textarea
+              ref={inputRef}
+              value={draft}
+              onChange={(event) => setDraft(event.target.value)}
+              onKeyDown={onKeyDown}
+              placeholder={streaming ? t.recruiter.thinking(recruiter.name) : t.room.typeAnswer}
+              aria-label={t.room.yourAnswer}
+              aria-describedby="composer-hint"
+              rows={1}
+              disabled={streaming}
+            />
+            <div className="composer-bar">
+              <ModelPicker onOpenSettings={onOpenSettings} placement="up" />
+              <IconButton
+                type="submit"
+                variant="primary"
+                label={t.room.send}
+                icon={<ArrowUpIcon />}
+                disabled={streaming || draft.trim() === ""}
+              />
+            </div>
           </div>
+          <span id="composer-hint" className="visually-hidden">
+            {t.room.composerHint}
+          </span>
         </form>
       )}
     </main>

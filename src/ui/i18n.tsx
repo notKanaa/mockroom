@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 import type { Language } from "../server/api-types";
+import { Segmented } from "./kit";
 import { uiMessages, type UIMessages } from "./messages";
 
 export const languages: readonly Language[] = ["en", "fr"];
@@ -56,25 +57,20 @@ export function useI18n(): I18n {
   return i18n;
 }
 
-/** The switch between English and French, shown on every screen. */
+/** The switch between English and French for the interface. */
 export function LanguageSwitch() {
   const { language, t, setLanguage } = useI18n();
   return (
-    <div className="language-switch" role="group" aria-label={t.switcher.label}>
-      {languages.map((option) => (
-        <button
-          key={option}
-          type="button"
-          lang={option}
-          className={option === language ? "language-option language-current" : "language-option"}
-          aria-pressed={option === language}
-          title={uiMessages[option].languageNames[option]}
-          onClick={() => setLanguage(option)}
-        >
-          {option.toUpperCase()}
-        </button>
-      ))}
-    </div>
+    <Segmented
+      label={t.switcher.label}
+      value={language}
+      onChange={setLanguage}
+      options={languages.map((option) => ({
+        value: option,
+        label: option.toUpperCase(),
+        name: uiMessages[option].languageNames[option],
+      }))}
+    />
   );
 }
 

@@ -1,6 +1,7 @@
 import { useState } from "react";
 import type { Language, PackLevel, PackSummary } from "../server/api-types";
 import { languages, useI18n } from "./i18n";
+import { Banner, Button } from "./kit";
 
 interface PackPickerProps {
   packs: PackSummary[];
@@ -40,9 +41,7 @@ export function PackPicker({ packs, selectedIds, onToggle, interviewLanguage }: 
 
   if (packs.length === 0) {
     return (
-      <p className="status status-unreachable" role="alert">
-        {t.picker.noPacks}
-      </p>
+      <Banner tone="error">{t.picker.noPacks}</Banner>
     );
   }
 
@@ -51,9 +50,7 @@ export function PackPicker({ packs, selectedIds, onToggle, interviewLanguage }: 
   }
 
   return (
-    <section className="picker" aria-labelledby="picker-title">
-      <h2 id="picker-title">{t.picker.title}</h2>
-      <p className="field-hint picker-hint">{t.picker.hint}</p>
+    <section className="picker" aria-label={t.picker.title}>
 
       <div className="filters">
         <FilterSelect
@@ -82,7 +79,7 @@ export function PackPicker({ packs, selectedIds, onToggle, interviewLanguage }: 
       <p className="picker-count" aria-live="polite">
         {shown.length === 0 ? t.picker.noMatch : t.picker.count(shown.length)}
         {filtered && (
-          <button type="button" className="link-button" onClick={() => setFilters(noFilters)}>
+          <button type="button" className="ui-link" onClick={() => setFilters(noFilters)}>
             {t.picker.clearFilters}
           </button>
         )}
@@ -106,15 +103,15 @@ export function PackPicker({ packs, selectedIds, onToggle, interviewLanguage }: 
                 </p>
                 <p className="pack-themes">{pack.themes.join(" · ")}</p>
               </div>
-              <button
-                type="button"
-                className={selected ? undefined : "secondary-button"}
+              <Button
+                size="sm"
+                variant={selected ? "primary" : "secondary"}
                 aria-pressed={selected}
                 aria-label={t.picker.addLabel(pack.title)}
                 onClick={() => onToggle(pack.id)}
               >
                 {selected ? t.picker.added : t.picker.add}
-              </button>
+              </Button>
             </li>
           );
         })}

@@ -1,22 +1,44 @@
 import type { TranscriptEntry } from "../server/api-types";
 import { useI18n } from "./i18n";
+import { Thinking } from "./kit";
+import { useSmoothText } from "./motion";
+import { Avatar, type Recruiter } from "./Recruiter";
 
 interface MessageProps {
   message: TranscriptEntry;
-  /** True while the interviewer's message is still streaming in. */
+  recruiter: Recruiter;
+  /** True while the recruiter's message is still streaming in. */
   typing?: boolean;
 }
 
-/** One message of the conversation, as a chat bubble. */
-export function Message({ message, typing = false }: MessageProps) {
+/**
+ * One message of the conversation. The recruiter's are plain text next to their
+ * avatar, like an AI chat; the candidate's are bubbles on the right.
+ */
+export function Message({ message, recruiter, typing = false }: MessageProps) {
   const { t } = useI18n();
+  const fromRecruiter = message.role === "interviewer";
+  const waiting = typing && message.content === "";
+  // Only the recruiter's replies stream in; everything else shows at once.
+  const text = useSmoothText(message.content, typing && fromRecruiter);
+  const revealing = fromRecruiter && text.length < message.content.length;
+
   return (
     <li className={`message message-${message.role}`}>
-      <span className="message-author">
-        {message.role === "interviewer" ? t.common.interviewer : t.common.you}
-        {message.followUpNumber !== undefined && <span className="message-tag">{t.common.followUp}</span>}
-      </span>
-      <p className={typing ? "message-text typing" : "message-text"}>{message.content}</p>
+      {fromRecruiter && <Avatar recruiter={recruiter} thinking={typing} />}
+      <div className="message-body">
+        <p className={fromRecruiter ? "message-author" : "message-author visually-hidden"}>
+          {fromRecruiter ? recruiter.name : t.common.you}
+          {message.followUpNumber !== undefined && <span className="message-tag">{t.common.followUp}</span>}
+        </p>
+        {waiting ? (
+          <p className="message-waiting">
+            <Thinking label={t.recruiter.thinking(recruiter.name)} />
+          </p>
+        ) : (
+          <p className={typing || revealing ? "message-text streaming" : "message-text"}>{text}</p>
+        )}
+      </div>
     </li>
   );
 }

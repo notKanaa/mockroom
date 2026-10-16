@@ -1,5 +1,8 @@
 import type { Debrief, DebriefQuestion, InterviewSummary } from "../server/api-types";
 import { interviewTitle, useI18n } from "./i18n";
+import { PlusIcon } from "./Icons";
+import { Banner, Button, PageHeader } from "./kit";
+import { Avatar, RecruiterBadge, recruiterFor, type Recruiter } from "./Recruiter";
 
 interface DebriefViewProps {
   interview: InterviewSummary;
@@ -10,19 +13,20 @@ interface DebriefViewProps {
 /** The feedback on a finished interview, question by question. Deliberately without any score. */
 export function DebriefView({ interview, debrief, onDone }: DebriefViewProps) {
   const { t } = useI18n();
+  const recruiter = recruiterFor(interview.id, t);
   return (
-    <main className="debrief">
-      <header className="debrief-header">
-        <p className="room-pack">{interviewTitle(interview, t)}</p>
-        <h1>{t.debrief.title}</h1>
-      </header>
+    <main className="page">
+      <PageHeader
+        lead={<RecruiterBadge recruiter={recruiter} detail={interviewTitle(interview, t)} />}
+        title={t.debrief.title}
+      />
 
-      <DebriefDetails debrief={debrief} totalQuestions={interview.totalQuestions} />
+      <DebriefDetails debrief={debrief} totalQuestions={interview.totalQuestions} recruiter={recruiter} />
 
-      <footer className="debrief-footer">
-        <button type="button" onClick={onDone}>
-          {t.common.backToPacks}
-        </button>
+      <footer className="page-footer">
+        <Button variant="primary" icon={<PlusIcon />} onClick={onDone}>
+          {t.common.newInterview}
+        </Button>
       </footer>
     </main>
   );
@@ -31,22 +35,31 @@ export function DebriefView({ interview, debrief, onDone }: DebriefViewProps) {
 interface DebriefDetailsProps {
   debrief: Debrief;
   totalQuestions: number;
+  recruiter: Recruiter;
 }
 
-/** The debrief itself: the overall summary, then the feedback on each question. */
-export function DebriefDetails({ debrief, totalQuestions }: DebriefDetailsProps) {
+/** The debrief itself: the recruiter's overall summary, then the feedback on each question. */
+export function DebriefDetails({ debrief, totalQuestions, recruiter }: DebriefDetailsProps) {
   const { t } = useI18n();
   const answered = debrief.questions.length;
 
   return (
     <>
-      {debrief.endedEarly && answered > 0 && (
-        <p className="debrief-note">{t.debrief.endedEarly(answered, totalQuestions)}</p>
+      {debrief.endedEarly && answered > 0 && <Banner>{t.debrief.endedEarly(answered, totalQuestions)}</Banner>}
+      {debrief.summary && (
+        <figure className="debrief-summary">
+          <Avatar recruiter={recruiter} />
+          <div>
+            <figcaption className="debrief-summary-label">{t.recruiter.debriefFrom(recruiter.name)}</figcaption>
+            <blockquote>
+              <p>{debrief.summary}</p>
+            </blockquote>
+          </div>
+        </figure>
       )}
-      {debrief.summary && <p className="debrief-summary">{debrief.summary}</p>}
 
       {answered === 0 ? (
-        <p className="debrief-note">{t.debrief.nothingAnswered}</p>
+        <Banner>{t.debrief.nothingAnswered}</Banner>
       ) : (
         <ol className="debrief-questions">
           {debrief.questions.map((question) => (
@@ -61,7 +74,7 @@ export function DebriefDetails({ debrief, totalQuestions }: DebriefDetailsProps)
 function QuestionFeedback({ question }: { question: DebriefQuestion }) {
   const { t } = useI18n();
   return (
-    <li className="feedback">
+    <li className="ui-card feedback">
       <p className="feedback-theme">
         {t.common.question(question.number)} · {question.theme}
         {question.uncurated && <span className="uncurated-badge">{t.common.uncurated}</span>}
@@ -69,29 +82,31 @@ function QuestionFeedback({ question }: { question: DebriefQuestion }) {
       <h2 className="feedback-question">{question.question}</h2>
       {question.uncurated && <p className="feedback-note">{t.debrief.uncuratedNote}</p>}
 
-      {question.strengths.length > 0 && (
-        <section className="feedback-section feedback-strengths">
-          <h3>{t.debrief.strengths}</h3>
-          <ul>
-            {question.strengths.map((strength, index) => (
-              <li key={index}>{strength}</li>
-            ))}
-          </ul>
-        </section>
-      )}
-
-      <section className="feedback-section feedback-gaps">
-        <h3>{t.debrief.gaps}</h3>
-        {question.gaps.length > 0 ? (
-          <ul>
-            {question.gaps.map((gap, index) => (
-              <li key={index}>{gap}</li>
-            ))}
-          </ul>
-        ) : (
-          <p>{t.debrief.noGaps}</p>
+      <div className="feedback-columns">
+        {question.strengths.length > 0 && (
+          <section className="feedback-section feedback-strengths">
+            <h3>{t.debrief.strengths}</h3>
+            <ul>
+              {question.strengths.map((strength, index) => (
+                <li key={index}>{strength}</li>
+              ))}
+            </ul>
+          </section>
         )}
-      </section>
+
+        <section className="feedback-section feedback-gaps">
+          <h3>{t.debrief.gaps}</h3>
+          {question.gaps.length > 0 ? (
+            <ul>
+              {question.gaps.map((gap, index) => (
+                <li key={index}>{gap}</li>
+              ))}
+            </ul>
+          ) : (
+            <p>{t.debrief.noGaps}</p>
+          )}
+        </section>
+      </div>
 
       <section className="feedback-section">
         <h3>{t.debrief.modelAnswer}</h3>

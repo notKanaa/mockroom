@@ -1,106 +1,23 @@
 import { useEffect, useState } from "react";
 import type { HistoryEntry, SavedInterview, TranscriptEntry } from "../server/api-types";
-import { deleteSavedInterview, fetchSavedInterview, listHistory } from "./api";
+import { deleteSavedInterview, fetchSavedInterview } from "./api";
 import { DebriefDetails } from "./DebriefView";
 import { formatDateTime, interviewTitle, useI18n } from "./i18n";
 import type { UIMessages } from "./messages";
+import { TrashIcon } from "./Icons";
+import { Banner, Button, PageHeader } from "./kit";
 import { Message } from "./Message";
-
-interface HistoryListProps {
-  onOpen: (interviewId: string) => void;
-  onBack: () => void;
-}
-
-/** The past interviews saved on this machine, most recent first. */
-export function HistoryList({ onOpen, onBack }: HistoryListProps) {
-  const [entries, setEntries] = useState<HistoryEntry[] | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [deletingId, setDeletingId] = useState<string | null>(null);
-  const { language, t } = useI18n();
-
-  useEffect(() => {
-    listHistory()
-      .then(setEntries)
-      .catch((failure: Error) => setError(failure.message));
-  }, []);
-
-  async function remove(entry: HistoryEntry) {
-    if (!window.confirm(t.history.deletePrompt)) return;
-    setError(null);
-    setDeletingId(entry.id);
-    try {
-      await deleteSavedInterview(entry.id);
-      setEntries((current) => current?.filter((candidate) => candidate.id !== entry.id) ?? null);
-    } catch (failure) {
-      setError(failure instanceof Error ? failure.message : String(failure));
-    } finally {
-      setDeletingId(null);
-    }
-  }
-
-  return (
-    <main className="history">
-      <header className="history-header">
-        <button type="button" className="link-button" onClick={onBack}>
-          {t.history.backToPacks}
-        </button>
-        <h1>{t.history.title}</h1>
-        <p className="history-note">{t.history.privacy}</p>
-      </header>
-
-      {error && (
-        <p className="status status-unreachable" role="alert">
-          {error}
-        </p>
-      )}
-      {!entries && !error && <p className="status">{t.history.loading}</p>}
-      {entries?.length === 0 && <p className="history-note">{t.history.empty}</p>}
-
-      {entries && entries.length > 0 && (
-        <ul className="packs">
-          {entries.map((entry) => (
-            <li key={entry.id} className="pack">
-              <div className="pack-info">
-                <p className="pack-title">{interviewTitle(entry, t)}</p>
-                <p className="pack-meta">
-                  {formatDateTime(entry.startedAt, language)} ·{" "}
-                  {t.history.interviewIn(t.languageNames[entry.language])}
-                </p>
-                <p className="pack-themes">
-                  {progressLabel(entry, t)}
-                  {!entry.hasDebrief && ` · ${t.history.noDebrief}`}
-                </p>
-              </div>
-              <div className="history-actions">
-                <button
-                  type="button"
-                  className="secondary-button"
-                  onClick={() => void remove(entry)}
-                  disabled={deletingId === entry.id}
-                >
-                  {deletingId === entry.id ? t.common.deleting : t.history.delete}
-                </button>
-                <button type="button" onClick={() => onOpen(entry.id)}>
-                  {t.history.open}
-                </button>
-              </div>
-            </li>
-          ))}
-        </ul>
-      )}
-    </main>
-  );
-}
+import { RecruiterBadge, recruiterFor, type Recruiter } from "./Recruiter";
 
 interface SavedInterviewViewProps {
   interviewId: string;
-  onBack: () => void;
+  onDeleted: () => void;
 }
 
 type Tab = "debrief" | "transcript";
 
-/** A past interview, read back from the history: its debrief and its whole transcript. */
-export function SavedInterviewView({ interviewId, onBack }: SavedInterviewViewProps) {
+/** A past interview, opened from the sidebar: its debrief and its whole transcript. */
+export function SavedInterviewView({ interviewId, onDeleted }: SavedInterviewViewProps) {
   const [interview, setInterview] = useState<SavedInterview | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [tab, setTab] = useState<Tab>("debrief");
@@ -108,6 +25,9 @@ export function SavedInterviewView({ interviewId, onBack }: SavedInterviewViewPr
   const { language, t } = useI18n();
 
   useEffect(() => {
+    setInterview(null);
+    setError(null);
+    setTab("debrief");
     fetchSavedInterview(interviewId)
       .then((saved) => {
         setInterview(saved);
@@ -122,40 +42,39 @@ export function SavedInterviewView({ interviewId, onBack }: SavedInterviewViewPr
     setDeleting(true);
     try {
       await deleteSavedInterview(interviewId);
-      onBack();
+      onDeleted();
     } catch (failure) {
       setError(failure instanceof Error ? failure.message : String(failure));
       setDeleting(false);
     }
   }
 
-  return (
-    <main className="debrief">
-      <header className="debrief-header">
-        <button type="button" className="link-button" onClick={onBack}>
-          {t.history.back}
-        </button>
-        {interview && (
-          <>
-            <p className="room-pack history-pack">{interviewTitle(interview, t)}</p>
-            <h1>{formatDateTime(interview.startedAt, language)}</h1>
-            <p className="history-note">
-              {t.history.interviewIn(t.languageNames[interview.language])} · {progressLabel(interview, t)}
-            </p>
-          </>
-        )}
-      </header>
+  const recruiter = recruiterFor(interviewId, t);
 
-      {error && (
-        <p className="status status-unreachable" role="alert">
-          {error}
-        </p>
-      )}
-      {!interview && !error && <p className="status">{t.history.loadingInterview}</p>}
+  return (
+    <main className="page">
+      {error && <Banner tone="error">{error}</Banner>}
+      {!interview && !error && <p className="page-status">{t.history.loadingInterview}</p>}
 
       {interview && (
         <>
-          <div className="tabs" role="tablist" aria-label={t.history.tabs}>
+          <PageHeader
+            lead={<RecruiterBadge recruiter={recruiter} detail={interviewTitle(interview, t)} />}
+            title={formatDateTime(interview.startedAt, language)}
+            intro={`${t.history.interviewIn(t.languageNames[interview.language])} · ${progressLabel(interview, t)}`}
+          />
+
+          <div
+            className="tabs"
+            role="tablist"
+            aria-label={t.history.tabs}
+            onKeyDown={(event) => {
+              if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;
+              const next = tab === "debrief" ? "transcript" : "debrief";
+              setTab(next);
+              document.getElementById(`tab-${next}`)?.focus();
+            }}
+          >
             <TabButton tab="debrief" current={tab} onSelect={setTab}>
               {t.history.debriefTab}
             </TabButton>
@@ -164,20 +83,24 @@ export function SavedInterviewView({ interviewId, onBack }: SavedInterviewViewPr
             </TabButton>
           </div>
 
-          <section role="tabpanel" aria-label={tab === "debrief" ? t.history.debriefTab : t.history.transcriptTab}>
+          <section id={`tabpanel-${tab}`} role="tabpanel" aria-labelledby={`tab-${tab}`} className="tabpanel">
             {tab === "debrief" &&
               (interview.debrief ? (
-                <DebriefDetails debrief={interview.debrief} totalQuestions={interview.totalQuestions} />
+                <DebriefDetails
+                  debrief={interview.debrief}
+                  totalQuestions={interview.totalQuestions}
+                  recruiter={recruiter}
+                />
               ) : (
-                <p className="debrief-note">{t.history.missingDebrief}</p>
+                <Banner>{t.history.missingDebrief}</Banner>
               ))}
-            {tab === "transcript" && <Transcript interview={interview} />}
+            {tab === "transcript" && <Transcript interview={interview} recruiter={recruiter} />}
           </section>
 
-          <footer className="debrief-footer">
-            <button type="button" className="secondary-button" onClick={() => void remove()} disabled={deleting}>
+          <footer className="page-footer">
+            <Button variant="danger" icon={<TrashIcon />} onClick={() => void remove()} disabled={deleting}>
               {deleting ? t.common.deleting : t.history.deleteInterview}
-            </button>
+            </Button>
           </footer>
         </>
       )}
@@ -197,8 +120,11 @@ function TabButton({ tab, current, onSelect, children }: TabButtonProps) {
     <button
       type="button"
       role="tab"
+      id={`tab-${tab}`}
       aria-selected={tab === current}
-      className={tab === current ? "tab tab-current" : "tab"}
+      tabIndex={tab === current ? 0 : -1}
+      aria-controls={`tabpanel-${tab}`}
+      className="tab"
       onClick={() => onSelect(tab)}
     >
       {children}
@@ -207,7 +133,7 @@ function TabButton({ tab, current, onSelect, children }: TabButtonProps) {
 }
 
 /** The whole conversation, grouped under each main question with its follow-ups. */
-function Transcript({ interview }: { interview: SavedInterview }) {
+function Transcript({ interview, recruiter }: { interview: SavedInterview; recruiter: Recruiter }) {
   const { t } = useI18n();
   const groups: { questionNumber?: number; messages: TranscriptEntry[] }[] = [];
   for (const message of interview.transcript) {
@@ -223,14 +149,14 @@ function Transcript({ interview }: { interview: SavedInterview }) {
         return (
           <section key={index} className="transcript-group">
             {group.questionNumber !== undefined && (
-              <h2 className="feedback-theme">
+              <h2 className="transcript-heading">
                 {t.common.question(group.questionNumber)}
                 {theme && ` · ${theme}`}
               </h2>
             )}
-            <ol className="transcript-messages">
+            <ol className="chat">
               {group.messages.map((message, messageIndex) => (
-                <Message key={messageIndex} message={message} />
+                <Message key={messageIndex} message={message} recruiter={recruiter} />
               ))}
             </ol>
           </section>
@@ -244,7 +170,5 @@ function progressLabel(
   { endedEarly, answeredQuestions, totalQuestions }: HistoryEntry | SavedInterview,
   t: UIMessages,
 ): string {
-  return endedEarly
-    ? t.history.endedEarly(answeredQuestions, totalQuestions)
-    : t.history.allAnswered(totalQuestions);
+  return endedEarly ? t.history.endedEarly(answeredQuestions, totalQuestions) : t.history.allAnswered(totalQuestions);
 }
