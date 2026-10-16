@@ -8,6 +8,7 @@ import { PART1_FRAMES, PART2_FRAMES } from "./v2/beats";
 import { Part1Composition } from "./v2/Part1";
 import { Part2Composition } from "./v2/Part2";
 import { PART3_FRAMES, Part3Composition } from "./v2/Part3";
+import { PART4_FRAMES, Part4Composition } from "./v2/Part4";
 import { FPS, PROMO_FRAMES, scenes, type SceneId } from "./timeline";
 
 /** The frame's size follows the `aspect` prop, so one composition renders every shape. */
@@ -78,6 +79,15 @@ export function Root() {
           id="V2-Part3"
           component={Part3Composition}
           durationInFrames={PART3_FRAMES}
+          fps={FPS}
+          {...formats["16:9"]}
+          defaultProps={{ locale: "en", aspect: "16:9" } satisfies FilmProps}
+          calculateMetadata={sizeFromAspect}
+        />
+        <Composition
+          id="V2-Part4"
+          component={Part4Composition}
+          durationInFrames={PART4_FRAMES}
           fps={FPS}
           {...formats["16:9"]}
           defaultProps={{ locale: "en", aspect: "16:9" } satisfies FilmProps}

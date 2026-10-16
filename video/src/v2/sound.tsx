@@ -12,6 +12,8 @@ export interface SoundCue {
   volume: number;
   /** Plays faster and higher (1 = as made), to vary a repeated sound. */
   rate?: number;
+  /** Fades the sound out over a few frames ending here (a frame of the part), to end a bed early. */
+  until?: number;
 }
 
 export const part1Sound: SoundCue[] = [
@@ -86,7 +88,15 @@ export function SoundTrack({ cues, gain = 1 }: { cues: SoundCue[]; gain?: number
         .filter((cue) => available.has(`audio/synth/${cue.sound}.wav`))
         .map((cue, index) => (
           <Sequence key={`${cue.sound}-${index}`} from={cue.frame} layout="none" name={`♪ ${cue.sound}`}>
-            <Audio src={staticFile(`audio/synth/${cue.sound}.wav`)} volume={Math.min(1, cue.volume * MASTER * gain)} playbackRate={cue.rate ?? 1} />
+            <Audio
+              src={staticFile(`audio/synth/${cue.sound}.wav`)}
+              volume={(local) => {
+                const level = Math.min(1, cue.volume * MASTER * gain);
+                if (cue.until === undefined) return level;
+                return level * Math.min(1, Math.max(0, (cue.until - cue.frame - local) / 14));
+              }}
+              playbackRate={cue.rate ?? 1}
+            />
           </Sequence>
         ))}
     </>
