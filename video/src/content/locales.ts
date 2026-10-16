@@ -21,7 +21,20 @@ export interface FilmCopy {
   problem: { lines: [string, string]; costKicker: string; costFrom: number; costTo: number; costUnit: string; currency: string; costNote: string };
   answer: { name: string; claims: string[] };
   demo: { paste: string; reads: string; interviews: string; digs: string; debrief: string };
-  privacy: { lines: string[]; local: string; ollama: string; providers: string[]; inside: string[] };
+  privacy: {
+    lines: string[];
+    local: string;
+    ollama: string;
+    providers: string[];
+    inside: string[];
+    /** Part 5 of the v2 film. */
+    title: string;
+    byok: string;
+    keyNote: string;
+    connected: string;
+    offline: string;
+    noAccount: string;
+  };
   cta: { command: string; url: string; license: string; tagline: string };
 }
 
@@ -76,6 +89,12 @@ const en: LocaleContent = {
       ollama: "Or free and offline, with Ollama.",
       providers: ["OpenAI", "Anthropic", "Gemini"],
       inside: ["settings.json", "interviews/"],
+      title: "Pick your AI.",
+      byok: "Bring your own API key.",
+      keyNote: "It stays on your machine, and only goes to its provider.",
+      connected: "Connected",
+      offline: "Offline",
+      noAccount: "No account. Your interviews stay on your computer.",
     },
     cta: {
       command: "npx mockroom",
@@ -156,6 +175,12 @@ const fr: LocaleContent = {
       ollama: "Ou gratuit et hors ligne, avec Ollama.",
       providers: ["OpenAI", "Anthropic", "Gemini"],
       inside: ["settings.json", "interviews/"],
+      title: "Choisis ton IA.",
+      byok: "Utilise ta propre clé d'API.",
+      keyNote: "Elle reste sur ta machine, et ne part que chez son fournisseur.",
+      connected: "Connecté",
+      offline: "Hors ligne",
+      noAccount: "Pas de compte. Tes entretiens restent sur ton ordi.",
     },
     cta: {
       command: "npx mockroom",

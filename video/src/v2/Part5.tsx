@@ -1,14 +1,19 @@
-// Part 5, privacy then the call to action, on a dark stage:
-//   a pane of dark glass forms: your machine. The interview's file from part 4
-//   glides inside, your key appears next to it → a beam carries the key to its own
-//   provider, and only there → Ollama flies in and settles inside, and the glass
-//   lights up: nothing leaves → the glass morphs into a terminal, `npx mockroom` is
-//   typed, Enter → the mark docks, the tagline, the repository and the licence.
+// Part 5, your AI and the call to action, on a dark stage, in the app's dark theme:
+//   "Pick your AI." slams in, then rises to a caption → the four providers deal in,
+//   each with its logo, as in Settings → a glowing selection lands on OpenAI, a key
+//   is typed (masked), tested, connected; the note says it stays on your machine and
+//   only goes to its provider → the selection hops to Anthropic and Gemini → it
+//   lands on Ollama: no key, a local model, offline → everything implodes into
+//   127.0.0.1 → that pill stretches into a terminal, `npx mockroom`, Enter → the
+//   terminal is knocked away, the mark docks and the name drops letter by letter,
+//   then the tagline, the command and the repository.
 
 import { CameraMotionBlur } from "@remotion/motion-blur";
 import { noise2D } from "@remotion/noise";
-import type { CSSProperties, ReactNode } from "react";
-import { AbsoluteFill, Easing, interpolateColors, useCurrentFrame } from "remotion";
+import { useState, type CSSProperties, type ReactNode } from "react";
+import { AbsoluteFill, Easing, useCurrentFrame } from "remotion";
+import { ProviderIcon } from "../../../src/ui/ProviderIcons";
+import { UiViewport, type Anchors } from "../components/UiViewport";
 import { FilmProvider, useFilm, type Film, type FilmProps } from "../lib/film";
 import { easeIn, easeInOut, easeOut, mix, progress, typed } from "../lib/motion";
 import { fonts } from "../theme/fonts";
@@ -16,52 +21,72 @@ import { stage } from "../theme/tokens";
 import { Bloom, BlurWords, Grain, impulse, Letters, Streak, useSpring, Vignette } from "./fx";
 import { SoundTrack, type SoundCue } from "./sound";
 
-export const PART5_FRAMES = 390;
+export const PART5_FRAMES = 450;
 
-/** Part 5's beats, in frames at 30 fps. */
+/** Part 5's beats, in frames at 30 fps (120 BPM: a beat every 15 frames). */
 export const p5 = {
-  glass: 0,
-  fileIn: 6,
-  lines: [12, 28, 50],
-  key: 40,
-  providers: 70,
-  beam: 88,
-  beamFrames: 16,
-  ollamaLine: 122,
-  ollama: 128,
-  ollamaLand: 146,
-  lit: 150,
-  morph: 184,
-  morphFrames: 20,
-  typing: 210,
-  enter: 242,
-  mark: 250,
-  tagline: 262,
-  url: 286,
-  license: 298,
-  out: 374,
+  title: 4,
+  titleUp: 30,
+  cards: 40,
+  pick: [86, 150, 162, 180],
+  byok: 84,
+  key: 100,
+  test: 128,
+  connected: 136,
+  ollamaLine: 180,
+  ollama: 186,
+  implode: 244,
+  implodeFrames: 16,
+  pill: 256,
+  noAccount: 250,
+  terminal: 290,
+  terminalFrames: 16,
+  typing: 312,
+  enter: 338,
+  knock: 342,
+  mark: 350,
+  name: 356,
+  tagline: 378,
+  footer: 396,
+  license: 408,
+  out: 436,
 };
 
+const providers = [
+  { id: "openai", label: "OpenAI", key: "sk-proj-", tail: "3f9a", model: "gpt-5-mini" },
+  { id: "anthropic", label: "Anthropic", key: "sk-ant-", tail: "q7Lw", model: "claude-haiku" },
+  { id: "gemini", label: "Gemini", key: "AIza", tail: "c2Xe", model: "gemini-flash" },
+  { id: "ollama", label: "Ollama", key: "", tail: "", model: "llama3.2" },
+] as const;
+
 export const part5Sound: SoundCue[] = [
-  { sound: "drone-dark", frame: 0, volume: 0.28, until: p5.morph + 10 },
-  { sound: "expand", frame: p5.glass, volume: 0.45 },
-  { sound: "whoosh-in", frame: p5.fileIn, volume: 0.4, rate: 0.9 },
-  { sound: "pops", frame: p5.key, volume: 0.45 },
-  ...[0, 1, 2].map((index) => ({ sound: "chip-land", frame: p5.providers + index * 4, volume: 0.35, rate: 1.1 + index * 0.08 })),
-  { sound: "chip-fly", frame: p5.beam, volume: 0.5, rate: 0.8 },
-  { sound: "mark", frame: p5.beam + p5.beamFrames, volume: 0.5 },
-  { sound: "fly-by", frame: p5.ollama, volume: 0.55 },
-  { sound: "dock", frame: p5.ollamaLand, volume: 0.7 },
-  { sound: "shimmer", frame: p5.lit, volume: 0.5 },
-  { sound: "swap", frame: p5.morph, volume: 0.5 },
-  { sound: "expand", frame: p5.morph - 2, volume: 0.45, rate: 1.2 },
+  { sound: "groove", frame: p5.cards - 6, volume: 0.8, until: p5.implode + 8 },
+  { sound: "slam", frame: p5.title + 2, volume: 0.8 },
+  { sound: "whoosh-in", frame: p5.titleUp - 2, volume: 0.45 },
+  ...[0, 1, 2, 3].map((index) => ({ sound: "flip", frame: p5.cards + index * 3, volume: 0.45, rate: 1 + index * 0.06 })),
+  ...p5.pick.map((frame, index) => ({ sound: "toggle", frame, volume: 0.6, rate: 1 + index * 0.05 })),
+  { sound: "swipe-small", frame: p5.key - 4, volume: 0.4 },
+  { sound: "typing", frame: p5.key, volume: 0.45, rate: 1.4 },
+  { sound: "click", frame: p5.test, volume: 0.7 },
+  { sound: "free-chime", frame: p5.connected, volume: 0.6 },
+  { sound: "typing", frame: p5.pick[1]! + 2, volume: 0.3, rate: 1.7 },
+  { sound: "typing", frame: p5.pick[2]! + 2, volume: 0.3, rate: 1.8 },
+  { sound: "dock", frame: p5.ollama, volume: 0.6 },
+  { sound: "pops", frame: p5.ollama + 14, volume: 0.45 },
+  { sound: "collapse", frame: p5.implode - 4, volume: 0.65 },
+  { sound: "ring-pop", frame: p5.pill, volume: 0.6 },
+  { sound: "drone-dark", frame: p5.implode, volume: 0.22, until: p5.enter },
+  { sound: "expand", frame: p5.terminal - 2, volume: 0.5 },
   { sound: "typing", frame: p5.typing, volume: 0.5, rate: 0.9 },
   { sound: "click", frame: p5.enter, volume: 0.8 },
-  { sound: "flood", frame: p5.enter, volume: 0.35, rate: 1.3 },
-  { sound: "pad-light", frame: p5.enter, volume: 0.7 },
-  { sound: "sting", frame: p5.mark, volume: 0.85 },
-  { sound: "letters", frame: p5.tagline, volume: 0.3 },
-  { sound: "pops", frame: p5.url, volume: 0.35, rate: 0.9 },
+  { sound: "slam", frame: p5.enter + 1, volume: 0.55 },
+  { sound: "whip", frame: p5.knock - 2, volume: 0.6 },
+  { sound: "dock", frame: p5.mark + 8, volume: 0.75 },
+  { sound: "letters", frame: p5.name, volume: 0.4 },
+  { sound: "sting", frame: p5.name + 4, volume: 0.85 },
+  { sound: "pad-light", frame: p5.mark, volume: 0.7 },
+  { sound: "shimmer", frame: p5.tagline, volume: 0.35 },
+  { sound: "pops", frame: p5.footer, volume: 0.4, rate: 0.9 },
   { sound: "toggle", frame: p5.license, volume: 0.3 },
 ];
 
@@ -69,18 +94,23 @@ export function Part5Composition(props: FilmProps) {
   return (
     <FilmProvider value={props}>
       <Part5 />
-      <SoundTrack cues={part5Sound} gain={1.3} />
+      <SoundTrack cues={part5Sound} gain={1.35} />
     </FilmProvider>
   );
 }
 
+const within = (frame: number, at: number, length: number) => frame >= at && frame < at + length;
+
 export function Part5() {
   const frame = useCurrentFrame();
   const fast =
-    frame < p5.fileIn + 16 ||
-    (frame >= p5.ollama && frame < p5.ollamaLand + 2) ||
-    (frame >= p5.morph && frame < p5.morph + p5.morphFrames) ||
-    (frame >= p5.mark && frame < p5.mark + 12);
+    within(frame, p5.title, 8) ||
+    within(frame, p5.titleUp, 14) ||
+    within(frame, p5.cards, 14) ||
+    p5.pick.some((at) => within(frame, at, 8)) ||
+    within(frame, p5.implode, p5.implodeFrames + 4) ||
+    within(frame, p5.terminal, p5.terminalFrames) ||
+    within(frame, p5.enter, 30);
   const out = progress(frame, p5.out, PART5_FRAMES - p5.out, easeIn);
   return (
     <AbsoluteFill style={{ background: stage.ink }}>
@@ -104,18 +134,18 @@ function DarkMesh() {
   const frame = useCurrentFrame();
   const film = useFilm();
   const { u, width, height } = film;
-  const lit = progress(frame, p5.lit, 30);
+  const finale = progress(frame, p5.mark, 30);
   const blobs = [
-    { x: 0.75, y: 0.45, size: 1300, color: `rgb(53 196 168 / ${0.14 + lit * 0.12})` },
+    { x: 0.5, y: 0.5, size: 1400, color: `rgb(53 196 168 / ${0.1 + finale * 0.12})` },
     { x: 0.15, y: 0.2, size: 1000, color: "rgb(111 183 255 / 0.10)" },
-    { x: 0.4, y: 0.95, size: 1100, color: "rgb(53 196 168 / 0.08)" },
+    { x: 0.85, y: 0.9, size: 1100, color: "rgb(53 196 168 / 0.09)" },
   ];
   return (
     <AbsoluteFill>
       {blobs.map((blob, index) => {
         const size = blob.size * u;
-        const x = blob.x * width + noise2D(`dx${index}`, frame * 0.005, 0) * 140 * u;
-        const y = blob.y * height + noise2D(`dy${index}`, 0, frame * 0.005) * 100 * u;
+        const x = blob.x * width + noise2D(`px${index}`, frame * 0.005, 0) * 160 * u;
+        const y = blob.y * height + noise2D(`py${index}`, 0, frame * 0.005) * 110 * u;
         return (
           <div
             key={index}
@@ -137,324 +167,481 @@ function DarkMesh() {
 }
 
 function layoutFor(film: Film) {
-  const { u, width, height } = film;
-  const stacked = film.portrait || film.square;
-  const glass = stacked
-    ? { x: width / 2, y: height * 0.62, w: width - 140 * u, h: 520 * u }
-    : { x: width - 740 * u, y: height / 2 + 20 * u, w: 720 * u, h: 500 * u };
-  const providerX = stacked ? null : width - 190 * u;
-  return {
-    glass,
-    text: stacked ? { x: 80 * u, y: 160 * u } : { x: 130 * u, y: height / 2 - 230 * u },
-    key: { x: glass.x - 150 * u, y: glass.y - 40 * u },
-    file: { x: glass.x, y: glass.y + 120 * u },
-    ollama: { x: glass.x + 170 * u, y: glass.y - 40 * u },
-    providers: [-160, 0, 160].map((dy, index) =>
-      providerX === null
-        ? { x: glass.x + (index - 1) * 260 * u, y: glass.y - glass.h / 2 - 90 * u }
-        : { x: providerX, y: glass.y + dy * u },
-    ),
-    terminal: { x: width / 2, y: height / 2 + 70 * u, w: 720 * u, h: 132 * u },
-  };
+  const scale = (film.portrait ? 1.2 : film.square ? 1.25 : 1.6) * film.u;
+  const W = Math.round(film.width / scale);
+  const H = Math.round(film.height / scale);
+  return { scale, W, H, cardsTop: H / 2 - 120, panelTop: H / 2 - 20 };
 }
 
 function Scene() {
   const frame = useCurrentFrame();
   const film = useFilm();
-  const { u } = film;
+  const { u, width, height } = film;
   const layout = layoutFor(film);
+  const [anchors, setAnchors] = useState<Anchors>({});
+  const implode = progress(frame, p5.implode, p5.implodeFrames, Easing.bezier(0.7, 0, 0.3, 1));
   const copy = film.film.privacy;
-  const textOut = progress(frame, p5.morph - 6, 14, easeIn);
-  const fit = film.portrait || film.square ? 0.72 : 1;
   return (
     <AbsoluteFill>
-      {/* The words, on the left. */}
-      {frame < p5.morph + 12 && (
+      <Title />
+      {/* The caption under the title changes with each step. */}
+      <div
+        style={{
+          position: "absolute",
+          left: 0,
+          right: 0,
+          top: 180 * u,
+          textAlign: "center",
+          fontFamily: fonts.display,
+          fontWeight: 600,
+          fontSize: 46 * u,
+          letterSpacing: "-0.03em",
+          color: stage.text,
+        }}
+      >
+        {frame < p5.ollamaLine + 6 && <BlurWords text={copy.byok} frame={frame} start={p5.byok} exit={p5.ollamaLine - 8} />}
+        {frame >= p5.ollamaLine && frame < p5.implode + 10 && (
+          <span style={{ color: stage.accent }}>
+            <BlurWords text={copy.ollama} frame={frame} start={p5.ollamaLine} exit={p5.implode - 4} />
+          </span>
+        )}
+      </div>
+
+      {frame < p5.implode + p5.implodeFrames + 2 && (
         <div
           style={{
             position: "absolute",
-            left: layout.text.x,
-            top: layout.text.y,
-            width: 640 * u,
-            fontFamily: fonts.display,
-            letterSpacing: "-0.04em",
-            color: stage.text,
-            opacity: 1 - textOut,
-            filter: `blur(${textOut * 14}px)`,
+            inset: 0,
+            transformOrigin: `${width / 2}px ${height / 2 + 60 * u}px`,
+            transform: `scale(${1 - implode * 0.95}) rotate(${implode * 8}deg)`,
+            filter: `blur(${implode * 8}px)`,
+            opacity: 1 - progress(frame, p5.implode + 8, 8),
           }}
         >
-          <div style={{ fontSize: 120 * u * fit, fontWeight: 800, lineHeight: 0.98 }}>
-            <BlurWords text={copy.lines[0]!} frame={frame} start={p5.lines[0]!} />
-            <br />
-            <BlurWords text={copy.lines[1]!} frame={frame} start={p5.lines[1]!} />
-          </div>
-          <div style={{ marginTop: 34 * u, fontSize: 40 * u * fit, fontWeight: 600, lineHeight: 1.2, color: stage.muted, letterSpacing: "-0.02em" }}>
-            <BlurWords text={copy.lines[2]!} frame={frame} start={p5.lines[2]!} stagger={1.5} />
-          </div>
-          <div style={{ marginTop: 14 * u, fontSize: 40 * u * fit, fontWeight: 600, lineHeight: 1.2, color: stage.accent, letterSpacing: "-0.02em" }}>
-            <BlurWords text={copy.ollama} frame={frame} start={p5.ollamaLine} stagger={1.5} />
-          </div>
+          <UiViewport width={layout.W} height={layout.H} scale={layout.scale} theme="dark" transparent onAnchors={setAnchors}>
+            <Providers layout={layout} anchors={anchors} />
+            <Panel layout={layout} />
+          </UiViewport>
         </div>
       )}
 
-      <Glass layout={layout} />
-      {frame < p5.morph + 6 && <Inside layout={layout} />}
-      {frame >= p5.typing - 30 && <Finale layout={layout} />}
+      <LocalPill />
+      <Terminal />
+      <Finale />
     </AbsoluteFill>
   );
 }
 
-const pillStyle = (u: number, lit = 0): CSSProperties => ({
-  display: "inline-flex",
-  alignItems: "center",
-  gap: 14 * u,
-  padding: `${14 * u}px ${24 * u}px`,
-  borderRadius: 999,
-  background: interpolateColors(lit, [0, 1], [stage.surface, stage.accentSoft]),
-  border: `${1.5 * u}px solid ${interpolateColors(lit, [0, 1], [stage.line, stage.accent])}`,
-  color: interpolateColors(lit, [0, 1], [stage.text, stage.accent]),
-  fontFamily: fonts.mono,
-  fontSize: 26 * u,
-  whiteSpace: "nowrap",
-  boxShadow: `0 ${14 * u}px ${30 * u}px rgb(0 0 0 / 0.35)${lit > 0 ? `, 0 0 ${30 * u * lit}px rgb(53 196 168 / ${0.35 * lit})` : ""}`,
-});
-
-function At({ x, y, children, style }: { x: number; y: number; children: ReactNode; style?: CSSProperties }) {
+/** "Pick your AI.": slams in big, then rises and shrinks into the title above the cards. */
+function Title() {
+  const frame = useCurrentFrame();
+  const film = useFilm();
+  const sp = useSpring();
+  const { u, height } = film;
+  const up = sp(frame, p5.titleUp, { damping: 16, stiffness: 120 });
+  const leave = progress(frame, p5.implode - 6, 12, easeIn);
+  if (frame >= p5.implode + 8) return null;
   return (
-    <div style={{ position: "absolute", left: x, top: y, width: 0, height: 0, display: "grid", placeItems: "center", ...style }}>
-      <div style={{ position: "absolute" }}>{children}</div>
+    <div
+      style={{
+        position: "absolute",
+        left: 0,
+        right: 0,
+        top: mix(height / 2 - 120 * u, 70 * u, up),
+        textAlign: "center",
+        fontFamily: fonts.display,
+        fontWeight: 800,
+        fontSize: mix(220, 92, up) * u,
+        letterSpacing: "-0.05em",
+        lineHeight: 1,
+        color: stage.text,
+        opacity: 1 - leave,
+        filter: `blur(${leave * 12}px)`,
+        whiteSpace: "nowrap",
+      }}
+    >
+      <Letters
+        text={film.film.privacy.title}
+        letter={(index) => {
+          const slam = sp(frame, p5.title + index * 0.8, { damping: 13, stiffness: 240, mass: 0.6 });
+          return { transform: `scale(${mix(2.6, 1, slam)})`, opacity: Math.min(1, slam * 3) };
+        }}
+      />
     </div>
   );
 }
 
-/** Your machine, as a pane of dark glass; it later morphs into the terminal. */
-function Glass({ layout }: { layout: ReturnType<typeof layoutFor> }) {
+/** Which provider is picked at a frame. */
+function picked(frame: number): number {
+  let index = -1;
+  p5.pick.forEach((at, order) => {
+    if (frame >= at) index = order;
+  });
+  return index;
+}
+
+/** The four providers, as in Settings, each with its logo, and a glowing selection that hops between them. */
+function Providers({ layout, anchors }: { layout: ReturnType<typeof layoutFor>; anchors: Anchors }) {
   const frame = useCurrentFrame();
   const film = useFilm();
   const sp = useSpring();
-  const { u } = film;
-  const born = sp(frame, p5.glass, { damping: 16, stiffness: 120 });
-  const lit = progress(frame, p5.lit, 20, easeOut);
-  const morph = progress(frame, p5.morph, p5.morphFrames, Easing.bezier(0.75, 0, 0.15, 1));
-  const enter = impulse(frame, p5.enter, 4);
-  const from = layout.glass;
-  const to = layout.terminal;
-  const x = mix(from.x, to.x, morph);
-  const y = mix(from.y, to.y, morph);
-  const w = mix(from.w, to.w, morph) * (1 - enter * 0.02);
-  const h = mix(from.h, to.h, morph) * (1 - enter * 0.04);
-  const ring = Math.max(lit * (1 - morph), progress(frame, p5.enter, 6) * (1 - progress(frame, p5.enter + 10, 40)));
+  const { ui } = film;
+  const current = picked(frame);
+  // The selection slides from card to card, with a spring.
+  const slots = providers.map((_, index) => anchors[`card-${index}`]);
+  const settle = current >= 0 ? sp(frame, p5.pick[current]!, { damping: 15, stiffness: 200 }) : 0;
+  const from = current > 0 ? slots[current - 1] : slots[0];
+  const to = current >= 0 ? slots[current] : undefined;
+  const select = to && from ? { x: mix(from.x, to.x, settle), y: to.y, w: mix(from.w, to.w, settle), h: to.h } : undefined;
+  const appear = current === 0 ? Math.min(1, settle * 2) : 1;
+  return (
+    <div style={{ position: "absolute", left: layout.W / 2 - 400, top: layout.cardsTop, width: 800 }}>
+      <div className="providers" style={{ gridTemplateColumns: "repeat(4, minmax(0, 1fr))", gap: 12 }}>
+        {providers.map((provider, index) => {
+          const deal = sp(frame, p5.cards + index * 3, { damping: 13, stiffness: 150 });
+          const chosen = index === current;
+          return (
+            <div
+              key={provider.id}
+              data-anchor={`card-${index}`}
+              className={`provider${chosen ? " provider-chosen" : ""}`}
+              style={{
+                gridTemplateColumns: "auto 1fr",
+                gap: "0 14px",
+                padding: "16px 18px",
+                opacity: Math.min(1, deal * 2),
+                transform: `perspective(800px) rotateY(${(1 - deal) * 80}deg) translateY(${(1 - deal) * 30}px)`,
+                transformOrigin: "0% 50%",
+              }}
+            >
+              <span className="mr-logo" style={{ gridRow: "span 2", width: 30, height: 30, color: chosen ? "var(--accent)" : "var(--text)" }}>
+                <ProviderIcon provider={provider.id} />
+              </span>
+              <span className="provider-name" style={{ fontSize: 16 }}>
+                {provider.label}
+              </span>
+              <span className="provider-note">{provider.id === "ollama" ? ui.settings.freeLocal : ui.settings.yourKey}</span>
+            </div>
+          );
+        })}
+      </div>
+      {select && (
+        <div
+          style={{
+            position: "absolute",
+            left: select.x - (layout.W / 2 - 400),
+            top: select.y - layout.cardsTop,
+            width: select.w,
+            height: select.h,
+            borderRadius: 12,
+            border: "2px solid var(--accent)",
+            boxShadow: "0 0 30px rgb(53 196 168 / 0.45), inset 0 0 20px rgb(53 196 168 / 0.15)",
+            opacity: appear,
+            pointerEvents: "none",
+          }}
+        />
+      )}
+      {to && (
+        <Bloom
+          frame={frame}
+          at={p5.pick[current]!}
+          x={to.x + to.w / 2 - (layout.W / 2 - 400)}
+          y={to.y + to.h / 2 - layout.cardsTop}
+          size={260}
+          color="rgb(53 196 168 / 0.45)"
+          duration={16}
+        />
+      )}
+    </div>
+  );
+}
+
+/** Under the cards: the key field for a keyed provider (typed, tested, connected), or Ollama's local model, offline. */
+function Panel({ layout }: { layout: ReturnType<typeof layoutFor> }) {
+  const frame = useCurrentFrame();
+  const film = useFilm();
+  const sp = useSpring();
+  const { ui } = film;
+  const copy = film.film.privacy;
+  const current = picked(frame);
+  const open = sp(frame, p5.key - 6, { damping: 15, stiffness: 140 });
+  if (frame < p5.key - 8) return null;
+  const provider = providers[Math.max(0, current)]!;
+  const keyed = provider.id !== "ollama";
+  const keyStart = current <= 0 ? p5.key : p5.pick[current]! + 2;
+  const masked = `${provider.key}${"•".repeat(14)}${provider.tail}`;
+  const shown = typed(masked, frame, keyStart, current <= 0 ? 0.9 : 2.2);
+  const typing = shown.length < masked.length;
+  const press = Math.max(0, 1 - Math.abs(frame - p5.test - 2) / 4);
+  const connected = current === 0 && frame >= p5.connected ? sp(frame, p5.connected, { damping: 11, stiffness: 200 }) : 0;
+  const swap = progress(frame, p5.ollama - 2, 10, easeInOut);
+  const offline = sp(frame, p5.ollama + 14, { damping: 10, stiffness: 200 });
+  const field: CSSProperties = {
+    display: "flex",
+    alignItems: "center",
+    height: 40,
+    padding: "0 12px",
+    border: "1px solid var(--line)",
+    borderRadius: "var(--r-sm)",
+    background: "var(--bg)",
+    fontFamily: fonts.mono,
+    fontSize: 15,
+    flex: 1,
+  };
+  return (
+    <div
+      className="ui-card"
+      style={{
+        position: "absolute",
+        left: layout.W / 2 - 400,
+        top: layout.panelTop,
+        width: 800,
+        height: 164,
+        overflow: "hidden",
+        opacity: Math.min(1, open * 2),
+        transform: `translateY(${(1 - open) * 40}px)`,
+        boxShadow: "0 30px 60px -20px rgb(0 0 0 / 0.6)",
+      }}
+    >
+      {/* A keyed provider: the key, masked, tested. */}
+      <div style={{ position: "absolute", inset: 20, display: "flex", flexDirection: "column", gap: 12, opacity: 1 - swap, filter: `blur(${swap * 8}px)` }}>
+        <p className="field-label">{ui.settings.apiKey(provider.label)}</p>
+        <div style={{ display: "flex", gap: 8 }}>
+          <div style={{ ...field, borderColor: typing ? "var(--accent)" : "var(--line)" }}>
+            {shown}
+            {typing && <span className="mr-caret" />}
+          </div>
+          <span style={{ display: "inline-flex", transform: `scale(${1 - press * 0.08})` }}>
+            <button type="button" className="ui-button ui-button-secondary ui-button-md">
+              {ui.settings.test}
+            </button>
+          </span>
+        </div>
+        <div style={{ display: "flex", alignItems: "center", gap: 12, minHeight: 34 }}>
+          {connected > 0 && (
+            <span
+              className="test-result status-ok"
+              style={{ padding: "6px 12px", transform: `scale(${connected})`, transformOrigin: "0 50%", opacity: Math.min(1, connected * 2) }}
+            >
+              ✓ {copy.connected} · {provider.model}
+            </span>
+          )}
+          <span className="ui-hint" style={{ opacity: progress(frame, p5.connected + 6, 10), color: "var(--accent-text)", fontSize: 15, fontWeight: 600 }}>
+            {copy.keyNote}
+          </span>
+        </div>
+      </div>
+      {/* Ollama: no key, a model on this computer, offline. */}
+      {!keyed || swap > 0 ? (
+        <div style={{ position: "absolute", inset: 20, display: "flex", flexDirection: "column", gap: 12, opacity: swap, filter: `blur(${(1 - swap) * 8}px)` }}>
+          <p className="field-label">{ui.settings.model}</p>
+          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+            <div style={field}>
+              <span className="mr-logo" style={{ width: 18, height: 18, marginRight: 10 }}>
+                <ProviderIcon provider="ollama" />
+              </span>
+              llama3.2
+            </div>
+            <span
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 8,
+                height: 40,
+                padding: "0 14px",
+                borderRadius: 999,
+                background: "var(--accent-soft)",
+                color: "var(--accent-text)",
+                fontWeight: 600,
+                fontSize: 14,
+                transform: `scale(${offline})`,
+                opacity: Math.min(1, offline * 2),
+              }}
+            >
+              <WifiOff />
+              {copy.offline}
+            </span>
+          </div>
+          <p className="ui-hint">{ui.settings.freeLocal}</p>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+const WifiOff = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+    <path d="M2 2l20 20M8.5 16.4a5 5 0 0 1 7 0M5 12.9a10 10 0 0 1 5.2-2.8M19 12.9a10 10 0 0 0-2.1-1.6M2 8.8a15 15 0 0 1 4.2-2.6M22 8.8A15 15 0 0 0 11 4.6M12 20h.01" />
+  </svg>
+);
+
+const LockIcon = ({ size }: { size: number }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={stage.accent} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <rect x="4" y="11" width="16" height="10" rx="2.5" />
+    <path d="M8 11V7a4 4 0 0 1 8 0v4" />
+  </svg>
+);
+
+const GitHubIcon = ({ size }: { size: number }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill={stage.text}>
+    <path d="M12 .5a12 12 0 0 0-3.8 23.4c.6.1.8-.3.8-.6v-2.1c-3.3.7-4-1.6-4-1.6-.6-1.4-1.4-1.8-1.4-1.8-1.1-.7.1-.7.1-.7 1.2.1 1.8 1.2 1.8 1.2 1.1 1.8 2.8 1.3 3.5 1 .1-.8.4-1.3.8-1.6-2.7-.3-5.5-1.3-5.5-5.9 0-1.3.5-2.4 1.2-3.2-.1-.3-.5-1.5.1-3.2 0 0 1-.3 3.3 1.2a11.5 11.5 0 0 1 6 0C17.3 4.6 18.3 5 18.3 5c.7 1.7.2 2.9.1 3.2.8.8 1.2 1.9 1.2 3.2 0 4.6-2.8 5.6-5.5 5.9.4.4.8 1.1.8 2.2v3.3c0 .3.2.7.8.6A12 12 0 0 0 12 .5z" />
+  </svg>
+);
+
+/** The terminal's frame: the 127.0.0.1 pill stretches into it. Shared by LocalPill and Terminal. */
+function terminalRect(film: Film, frame: number) {
+  const { u, width, height } = film;
+  const stretch = progress(frame, p5.terminal, p5.terminalFrames, Easing.bezier(0.75, 0, 0.15, 1));
+  const pill = { x: width / 2, y: height / 2 + 40 * u, w: 420 * u, h: 96 * u };
+  const box = { x: width / 2, y: height / 2 + 20 * u, w: 760 * u, h: 140 * u };
+  return {
+    stretch,
+    x: mix(pill.x, box.x, stretch),
+    y: mix(pill.y, box.y, stretch),
+    w: mix(pill.w, box.w, stretch),
+    h: mix(pill.h, box.h, stretch),
+    radius: mix(pill.h / 2, 30 * u, stretch),
+  };
+}
+
+/** Everything implodes into the local address: no account, your interviews stay here. */
+function LocalPill() {
+  const frame = useCurrentFrame();
+  const film = useFilm();
+  const sp = useSpring();
+  const { u, width, height } = film;
+  if (frame < p5.pill || frame >= p5.knock + 20) return null;
+  const pop = sp(frame, p5.pill, { damping: 10, stiffness: 200 });
+  const rect = terminalRect(film, frame);
+  const knocked = progress(frame, p5.knock, 16, Easing.bezier(0.6, 0, 1, 0.6));
+  const squash = impulse(frame, p5.enter, 4);
+  const textIn = 1 - rect.stretch;
   return (
     <>
       <div
         style={{
           position: "absolute",
-          left: x - w / 2,
-          top: y - h / 2,
-          width: w,
-          height: h,
-          borderRadius: mix(36, 30, morph) * u,
-          background: "linear-gradient(160deg, rgb(255 255 255 / 0.09), rgb(255 255 255 / 0.025) 60%)",
-          border: `${1.5 * u}px solid ${interpolateColors(ring, [0, 1], ["rgba(255, 255, 255, 0.12)", stage.accent])}`,
-          boxShadow: `0 ${40 * u}px ${120 * u}px ${-20 * u}px rgb(0 0 0 / 0.7), inset 0 1px 0 rgb(255 255 255 / 0.14), 0 0 ${140 * u * ring}px rgb(53 196 168 / ${0.35 * ring})`,
-          backdropFilter: `blur(${20 * u}px)`,
-          opacity: Math.min(1, born * 1.6),
-          transform: `scale(${0.9 + 0.1 * born})`,
+          left: rect.x - rect.w / 2,
+          top: rect.y - rect.h / 2 + knocked * height * 0.8,
+          width: rect.w,
+          height: rect.h,
+          borderRadius: rect.radius,
+          background: "linear-gradient(160deg, rgb(255 255 255 / 0.09), rgb(255 255 255 / 0.03))",
+          border: `${1.5 * u}px solid rgb(53 196 168 / ${0.4 + squash * 0.6})`,
+          boxShadow: `0 ${30 * u}px ${80 * u}px rgb(0 0 0 / 0.6), 0 0 ${(40 + squash * 140) * u}px rgb(53 196 168 / ${0.25 + squash * 0.4})`,
+          transform: `scale(${pop * (1 + squash * 0.05)}, ${pop * (1 - squash * 0.12)}) rotate(${knocked * 14}deg)`,
+          filter: `blur(${knocked * 10}px)`,
+          opacity: 1 - knocked,
         }}
       >
-        {/* The address: everything inside is on this computer. */}
         <div
           style={{
             position: "absolute",
-            left: 34 * u,
-            top: 28 * u,
+            inset: 0,
             display: "flex",
             alignItems: "center",
-            gap: 12 * u,
+            justifyContent: "center",
+            gap: 16 * u,
             fontFamily: fonts.mono,
-            fontSize: 24 * u,
+            fontSize: 40 * u,
             color: stage.accent,
-            opacity: progress(frame, p5.glass + 10, 10) * (1 - morph),
+            opacity: textIn,
           }}
         >
-          <span
-            style={{
-              width: 12 * u,
-              height: 12 * u,
-              borderRadius: 99,
-              background: stage.accent,
-              boxShadow: `0 0 ${10 + 8 * Math.sin(frame * 0.2)}px ${stage.accent}`,
-            }}
-          />
+          <LockIcon size={40 * u} />
           {film.film.privacy.local}
         </div>
       </div>
-      <Bloom frame={frame} at={p5.ollamaLand} x={layout.ollama.x} y={layout.ollama.y} size={700 * u} color="rgb(53 196 168 / 0.5)" duration={24} />
+      <Bloom frame={frame} at={p5.pill} x={width / 2} y={height / 2 + 40 * u} size={700 * u} color="rgb(53 196 168 / 0.45)" duration={22} />
+      <div
+        style={{
+          position: "absolute",
+          left: 0,
+          right: 0,
+          top: height / 2 - 120 * u,
+          textAlign: "center",
+          fontFamily: fonts.display,
+          fontWeight: 700,
+          fontSize: 56 * u,
+          letterSpacing: "-0.035em",
+          color: stage.text,
+        }}
+      >
+        <BlurWords text={film.film.privacy.noAccount} frame={frame} start={p5.noAccount + 6} exit={p5.terminal - 6} stagger={1.6} />
+      </div>
     </>
   );
 }
 
-/** What is inside the glass, the providers outside it, and the key's beam. */
-function Inside({ layout }: { layout: ReturnType<typeof layoutFor> }) {
+/** The command typed into the terminal, and the hit of Enter. */
+function Terminal() {
+  const frame = useCurrentFrame();
+  const film = useFilm();
+  const { u, height } = film;
+  if (frame < p5.terminal + 8 || frame >= p5.knock + 20) return null;
+  const rect = terminalRect(film, frame);
+  const copy = film.film.cta;
+  const command = typed(copy.command, frame, p5.typing, 0.55);
+  const caret = command.length < copy.command.length || Math.floor(frame / 9) % 2 === 0;
+  const knocked = progress(frame, p5.knock, 16, Easing.bezier(0.6, 0, 1, 0.6));
+  return (
+    <>
+      <div
+        style={{
+          position: "absolute",
+          left: rect.x - rect.w / 2,
+          top: rect.y - rect.h / 2 + knocked * height * 0.8,
+          width: rect.w,
+          height: rect.h,
+          display: "flex",
+          alignItems: "center",
+          gap: 24 * u,
+          padding: `0 ${48 * u}px`,
+          fontFamily: fonts.mono,
+          fontSize: 64 * u,
+          color: stage.text,
+          opacity: progress(frame, p5.terminal + 8, 8) * (1 - knocked),
+          transform: `rotate(${knocked * 14}deg)`,
+          filter: `blur(${knocked * 10}px)`,
+        }}
+      >
+        <span style={{ color: stage.accent }}>$</span>
+        <span style={{ whiteSpace: "pre" }}>
+          {command}
+          <span style={{ display: "inline-block", width: "0.55ch", height: "1em", marginLeft: 6 * u, verticalAlign: "text-bottom", background: stage.accent, opacity: caret ? 1 : 0 }} />
+        </span>
+      </div>
+      <Streak frame={frame} at={p5.enter} x={rect.x} y={rect.y} length={2000 * u} thickness={6 * u} color="rgb(53 196 168 / 0.9)" duration={18} />
+      <Bloom frame={frame} at={p5.enter} x={rect.x} y={rect.y} size={1300 * u} color="rgb(53 196 168 / 0.4)" duration={24} />
+    </>
+  );
+}
+
+/** The end card: the mark docks, the name drops letter by letter, then the tagline, the command and the repository. */
+function Finale() {
   const frame = useCurrentFrame();
   const film = useFilm();
   const sp = useSpring();
   const { u, width, height } = film;
-  const copy = film.film.privacy;
-  const fade = 1 - progress(frame, p5.morph - 4, 10);
-
-  // The file from part 4 glides in from the centre of the frame.
-  const glide = progress(frame, p5.fileIn, 22, Easing.bezier(0.5, 0, 0.2, 1));
-  const file = { x: mix(width / 2, layout.file.x, glide), y: mix(height / 2 + 90 * u, layout.file.y, glide) };
-  const key = sp(frame, p5.key, { damping: 11, stiffness: 190 });
-
-  // The beam from the key to its provider (the middle one), and only there.
-  const target = layout.providers[1]!;
-  const start = { x: layout.key.x + 150 * u, y: layout.key.y };
-  const end = { x: target.x - 120 * u, y: target.y };
-  const beam = progress(frame, p5.beam, p5.beamFrames, Easing.bezier(0.6, 0, 0.2, 1));
-  const beamFade = 1 - progress(frame, p5.ollama - 4, 10);
-  const length = Math.hypot(end.x - start.x, end.y - start.y);
-  const angle = Math.atan2(end.y - start.y, end.x - start.x);
-  const arrived = progress(frame, p5.beam + p5.beamFrames, 8);
-
-  // Ollama drops in from above and settles inside.
-  const fly = sp(frame, p5.ollama, { damping: 14, stiffness: 110 });
-  const ollamaOn = frame >= p5.ollama;
-  const ollamaLit = progress(frame, p5.ollamaLand, 10);
-  const dim = progress(frame, p5.lit, 14) * 0.6;
-
-  return (
-    <div style={{ position: "absolute", inset: 0, opacity: fade }}>
-      <At x={file.x} y={file.y}>
-        <div style={{ ...pillStyle(u), fontSize: 26 * u }}>
-          <svg width={30 * u} height={30 * u} viewBox="0 0 24 24" fill="none" stroke={stage.accent} strokeWidth="1.8" strokeLinejoin="round">
-            <path d="M6 3h8l4 4v14H6z" />
-            <path d="M14 3v4h4M9 13h6M9 17h4" />
-          </svg>
-          <span>
-            <span style={{ opacity: 0.6 }}>{copy.inside[1]}</span>2026-10-16.json
-          </span>
-        </div>
-      </At>
-      <At x={layout.key.x} y={layout.key.y} style={{ opacity: Math.min(1, key * 2), transform: `scale(${key})` }}>
-        <div style={pillStyle(u)}>
-          <svg width={30 * u} height={30 * u} viewBox="0 0 24 24" fill="none" stroke={stage.warn} strokeWidth="1.8" strokeLinecap="round">
-            <circle cx="8" cy="15" r="4" />
-            <path d="M10.8 12.2 20 3M16 7l3 3M14 9l2 2" />
-          </svg>
-          {copy.inside[0]}
-        </div>
-      </At>
-
-      {copy.providers.map((name, index) => {
-        const show = sp(frame, p5.providers + index * 4, { damping: 13, stiffness: 170 });
-        const point = layout.providers[index]!;
-        const lit = index === 1 ? arrived * (1 - dim * 1.4) : 0;
-        return (
-          <At key={name} x={point.x} y={point.y} style={{ opacity: Math.min(1, show * 2) * (1 - dim), transform: `translateX(${(1 - show) * 60 * u}px)` }}>
-            <div style={pillStyle(u, Math.max(0, lit))}>{name}</div>
-          </At>
-        );
-      })}
-
-      {beam > 0 && (
-        <div
-          style={{
-            position: "absolute",
-            left: start.x,
-            top: start.y - 2 * u,
-            width: length * beam,
-            height: 4 * u,
-            transformOrigin: "0 50%",
-            transform: `rotate(${angle}rad)`,
-            borderRadius: 4 * u,
-            background: `linear-gradient(90deg, transparent, ${stage.accent})`,
-            boxShadow: `0 0 ${16 * u}px rgb(53 196 168 / 0.6)`,
-            opacity: beamFade,
-          }}
-        />
-      )}
-      {beam > 0 && beam < 1 && (
-        <div
-          style={{
-            position: "absolute",
-            left: start.x + Math.cos(angle) * length * beam - 22 * u,
-            top: start.y + Math.sin(angle) * length * beam - 22 * u,
-            width: 44 * u,
-            height: 44 * u,
-            borderRadius: "50%",
-            background: `radial-gradient(circle, #ffffff 0%, ${stage.accent} 35%, transparent 70%)`,
-            filter: `blur(${2 * u}px)`,
-          }}
-        />
-      )}
-
-      {ollamaOn && (
-        <At
-          x={mix(layout.ollama.x + 80 * u, layout.ollama.x, fly)}
-          y={mix(-120 * u, layout.ollama.y, fly)}
-          style={{ transform: `scale(${1 + impulse(frame, p5.ollamaLand, 4) * 0.12})` }}
-        >
-          <div style={pillStyle(u, ollamaLit)}>Ollama</div>
-        </At>
-      )}
-    </div>
-  );
-}
-
-/** The terminal: the command typed, Enter, then the mark, the tagline, the repository and the licence. */
-function Finale({ layout }: { layout: ReturnType<typeof layoutFor> }) {
-  const frame = useCurrentFrame();
-  const film = useFilm();
-  const sp = useSpring();
-  const { u, width } = film;
+  if (frame < p5.mark - 4) return null;
   const copy = film.film.cta;
-  const fit = film.portrait || film.square ? 0.72 : 1;
-  const term = layout.terminal;
-  const shown = progress(frame, p5.morph + p5.morphFrames - 4, 8);
-  const command = typed(copy.command, frame, p5.typing, 0.55);
-  const typing = frame >= p5.typing && command.length < copy.command.length;
-  const caret = typing || Math.floor(frame / 9) % 2 === 0;
-
-  // The mark docks above the terminal.
-  const size = 86 * u * fit;
-  const half = size * 0.1875;
-  const markY = term.y - 330 * u * fit;
+  const fit = film.portrait ? 0.55 : film.square ? 0.7 : 1;
+  const size = 96 * u * fit;
+  const offset = size * 0.375;
   const dock = sp(frame, p5.mark, { damping: 11, stiffness: 160 });
   const ringIn = sp(frame, p5.mark - 4, { damping: 10, stiffness: 180 });
-  const url = sp(frame, p5.url, { damping: 14, stiffness: 150 });
+  const push = 1 + 0.03 * progress(frame, p5.mark, PART5_FRAMES - p5.mark, easeInOut);
+  const footer = sp(frame, p5.footer, { damping: 14, stiffness: 150 });
+  const lockupY = height / 2 - 190 * u * fit;
   return (
-    <>
-      <At x={term.x} y={term.y} style={{ opacity: shown }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 24 * u, fontFamily: fonts.mono, fontSize: 64 * u * fit, color: stage.text }}>
-          <span style={{ color: stage.accent }}>$</span>
-          <span style={{ minWidth: `${copy.command.length}ch`, whiteSpace: "pre" }}>
-            {command}
-            <span
-              style={{
-                display: "inline-block",
-                width: "0.55ch",
-                height: "1em",
-                marginLeft: 6 * u,
-                verticalAlign: "text-bottom",
-                background: stage.accent,
-                opacity: caret ? 1 : 0,
-              }}
-            />
-          </span>
-        </div>
-      </At>
-      <Streak frame={frame} at={p5.enter} x={term.x} y={term.y} length={1800 * u} thickness={5 * u} color="rgb(53 196 168 / 0.9)" duration={20} />
-      <Bloom frame={frame} at={p5.enter} x={term.x} y={term.y} size={1100 * u} color="rgb(53 196 168 / 0.35)" duration={26} />
-
-      {frame >= p5.mark - 4 && (
-        <>
+    <AbsoluteFill style={{ transform: `scale(${push})` }}>
+      <div style={{ position: "absolute", left: 0, right: 0, top: lockupY, display: "flex", justifyContent: "center", alignItems: "center", gap: 40 * u * fit }}>
+        <div style={{ position: "relative", width: size + offset, height: size, flex: "none" }}>
           <div
             style={{
               position: "absolute",
-              left: mix(-size, width / 2 - half, dock) - size / 2,
-              top: markY - size / 2,
+              left: mix(-width / 2, 0, dock),
+              top: 0,
               width: size,
               height: size,
               borderRadius: "50%",
@@ -465,8 +652,8 @@ function Finale({ layout }: { layout: ReturnType<typeof layoutFor> }) {
           <div
             style={{
               position: "absolute",
-              left: width / 2 + half - size / 2,
-              top: markY - size / 2,
+              left: offset,
+              top: 0,
               width: size,
               height: size,
               borderRadius: "50%",
@@ -474,41 +661,96 @@ function Finale({ layout }: { layout: ReturnType<typeof layoutFor> }) {
               transform: `scale(${ringIn})`,
             }}
           />
-          <Bloom frame={frame} at={p5.mark + 8} x={width / 2} y={markY} size={600 * u} color="rgb(53 196 168 / 0.5)" duration={24} />
-        </>
-      )}
+        </div>
+        <Letters
+          text={film.film.answer.name}
+          style={{ fontFamily: fonts.display, fontWeight: 800, fontSize: 200 * u * fit, letterSpacing: "-0.055em", lineHeight: 1, color: stage.text }}
+          letter={(index) => {
+            const land = sp(frame, p5.name + index * 1.4, { damping: 12, stiffness: 190 });
+            return { transform: `translateY(${(1 - land) * -120}%) rotate(${(1 - land) * -12}deg)`, opacity: Math.min(1, land * 2) };
+          }}
+        />
+      </div>
+      <Bloom frame={frame} at={p5.mark + 8} x={width / 2 - 300 * u * fit} y={lockupY + size / 2} size={800 * u} color="rgb(53 196 168 / 0.5)" duration={26} />
+      <Streak frame={frame} at={p5.mark + 8} x={width / 2} y={lockupY + size / 2} length={1600 * u} thickness={4 * u} color="rgb(53 196 168 / 0.8)" duration={20} />
 
       <div
         style={{
           position: "absolute",
           left: 80 * u,
           right: 80 * u,
-          top: markY + size / 2 + 40 * u * fit,
+          top: height / 2 + 50 * u * fit,
           textAlign: "center",
           fontFamily: fonts.display,
-          fontWeight: 800,
-          fontSize: 92 * u * fit,
-          letterSpacing: "-0.045em",
-          lineHeight: 1.02,
+          fontWeight: 700,
+          fontSize: 64 * u * fit,
+          letterSpacing: "-0.04em",
           color: stage.text,
         }}
       >
-        <BlurWords text={copy.tagline} frame={frame} start={p5.tagline} stagger={2.5} />
+        <BlurWords text={copy.tagline} frame={frame} start={p5.tagline} stagger={2.2} />
       </div>
 
-      <At x={width / 2} y={term.y + 150 * u * fit} style={{ opacity: Math.min(1, url * 2), transform: `translateY(${(1 - url) * 30 * u}px)` }}>
-        <Letters
-          text={copy.url}
-          style={{ fontFamily: fonts.display, fontWeight: 600, fontSize: 52 * u * fit, letterSpacing: "-0.03em", color: stage.text, whiteSpace: "nowrap" }}
-          letter={(index) => {
-            const t = progress(frame, p5.url + index * 0.35, 8, easeOut);
-            return { opacity: t, filter: `blur(${(1 - t) * 6}px)` };
-          }}
-        />
-      </At>
-      <At x={width / 2} y={term.y + 230 * u * fit} style={{ opacity: progress(frame, p5.license, 14, easeInOut) }}>
-        <div style={{ fontFamily: fonts.mono, fontSize: 30 * u * fit, color: stage.muted, letterSpacing: "0.04em", whiteSpace: "nowrap" }}>{copy.license}</div>
-      </At>
-    </>
+      <div
+        style={{
+          position: "absolute",
+          left: 0,
+          right: 0,
+          top: height / 2 + 190 * u * fit,
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          gap: 28 * u,
+          opacity: Math.min(1, footer * 2),
+          transform: `translateY(${(1 - footer) * 40 * u}px)`,
+        }}
+      >
+        <Chip u={u} fit={fit}>
+          <span style={{ color: stage.accent }}>$</span> {copy.command}
+        </Chip>
+        <Chip u={u} fit={fit}>
+          <GitHubIcon size={30 * u * fit} />
+          {copy.url}
+        </Chip>
+      </div>
+      <div
+        style={{
+          position: "absolute",
+          left: 0,
+          right: 0,
+          top: height / 2 + 300 * u * fit,
+          textAlign: "center",
+          fontFamily: fonts.mono,
+          fontSize: 28 * u * fit,
+          letterSpacing: "0.04em",
+          color: stage.muted,
+          opacity: progress(frame, p5.license, 14, easeOut),
+        }}
+      >
+        {copy.license}
+      </div>
+    </AbsoluteFill>
+  );
+}
+
+function Chip({ u, fit, children }: { u: number; fit: number; children: ReactNode }) {
+  return (
+    <div
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        gap: 14 * u,
+        padding: `${16 * u * fit}px ${30 * u * fit}px`,
+        borderRadius: 999,
+        background: "rgb(255 255 255 / 0.06)",
+        border: `${1.5 * u}px solid rgb(255 255 255 / 0.12)`,
+        fontFamily: fonts.mono,
+        fontSize: 32 * u * fit,
+        color: stage.text,
+        whiteSpace: "pre",
+      }}
+    >
+      {children}
+    </div>
   );
 }
