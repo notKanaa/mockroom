@@ -32,7 +32,12 @@ export function InterviewRoom({ session, onOpenSettings }: InterviewRoomProps) {
   }, [messages, finished, debrief.error]);
 
   useEffect(() => {
-    if (!streaming) inputRef.current?.focus();
+    // The page may have been scrolled on the screen before; the room starts at the top.
+    window.scrollTo(0, 0);
+  }, []);
+
+  useEffect(() => {
+    if (!streaming) inputRef.current?.focus({ preventScroll: true });
   }, [streaming]);
 
   if (!interview) return null;

@@ -504,6 +504,14 @@ input[type="radio"] {
   overflow: hidden;
 }
 
+/* During the interview the page itself never scrolls, whatever else ends up in it (a browser
+   extension's elements, for instance): reaching the end of the conversation can't drag the page up. */
+html:has(.shell-focus .room),
+html:has(.shell-focus .room) body {
+  height: 100%;
+  overflow: hidden;
+}
+
 .shell-focus:has(.page) {
   height: auto;
   overflow: visible;
@@ -1478,6 +1486,8 @@ button.chip[aria-busy="true"] {
 .room-scroll {
   flex: 1;
   overflow-y: auto;
+  /* Scrolling past the end of the conversation stops here instead of moving the page. */
+  overscroll-behavior: contain;
   padding: var(--s8) var(--s4) var(--s4);
 }
 
