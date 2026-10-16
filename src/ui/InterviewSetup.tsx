@@ -3,9 +3,9 @@ import type { InterviewRequest, Language, PackLevel, PackSummary, TechnologyMatc
 import { sameTechnology } from "../server/packs/technology";
 import { matchPacks } from "./api";
 import { LanguagePicker } from "./Home";
-import { interviewTitle, useI18n } from "./i18n";
+import { useI18n } from "./i18n";
 import { PlusIcon } from "./Icons";
-import { Button, Card, Hint, PageHeader } from "./kit";
+import { Button, Card, Dropdown, Hint, PageHeader } from "./kit";
 import { PackPicker } from "./PackPicker";
 
 interface InterviewSetupProps {
@@ -175,7 +175,12 @@ export function InterviewSetup({
             {t.setup.summaryTitle}
           </h2>
           <p aria-live="polite">
-            {nothingChosen ? t.setup.nothingChosen : interviewTitle({ packs: selectedPacks, uncurated }, t)}
+            {nothingChosen
+              ? t.setup.nothingChosen
+              : [
+                  ...selectedPacks.map((pack) => pack.title),
+                  ...(uncurated.length > 0 ? [t.setup.uncuratedCount(uncurated.length)] : []),
+                ].join(" + ")}
           </p>
         </div>
         <LanguagePicker value={interviewLanguage} onChange={onLanguageChange} placement="up" />
@@ -216,71 +221,74 @@ function DetectionEditor({ detection, selectedPacks, onChange }: DetectionEditor
     onChange({ ...detection, technologies: detection.technologies.filter((known) => known !== technology) });
   }
 
-  const anyUncurated = detection.technologies.some(
-    (technology) => !selectedPacks.some((pack) => sameTechnology(pack.technology, technology)),
-  );
+  const covered = (technology: string) =>
+    selectedPacks.filter((pack) => sameTechnology(pack.technology, technology)).map((pack) => pack.title);
+  const anyCovered = detection.technologies.some((technology) => covered(technology).length > 0);
+  const anyUncurated = detection.technologies.some((technology) => covered(technology).length === 0);
 
   return (
     <Card title={t.setup.detectedTitle} id="detection-title" className="detection">
       <p className="field-label">{t.setup.technologies}</p>
-      {detection.technologies.length === 0 ? (
-        <Hint>{t.setup.noTechnology}</Hint>
-      ) : (
-        <ul className="technologies">
-          {detection.technologies.map((technology) => {
-            const covering = selectedPacks.filter((pack) => sameTechnology(pack.technology, technology));
-            return (
-              <li key={technology} className={covering.length > 0 ? "technology" : "technology technology-uncurated"}>
-                <span className="technology-name">{technology}</span>
-                {covering.length > 0 ? (
-                  <span className="technology-pack">
-                    {t.setup.coveredBy(covering.map((pack) => pack.title).join(", "))}
-                  </span>
-                ) : (
-                  <span className="uncurated-badge">{t.common.uncurated}</span>
-                )}
-                <button
-                  type="button"
-                  className="technology-remove"
-                  aria-label={t.setup.remove(technology)}
-                  title={t.setup.remove(technology)}
-                  onClick={() => remove(technology)}
-                >
-                  ×
-                </button>
-              </li>
-            );
-          })}
+      <ul className="chips chips-start technologies">
+        {detection.technologies.map((technology) => {
+          const packs = covered(technology);
+          const status = packs.length > 0 ? t.setup.coveredBy(packs.join(", ")) : t.common.uncurated;
+          return (
+            <li key={technology} className="chip technology" title={status}>
+              <span className={`status-dot ${packs.length > 0 ? "status-dot-covered" : "status-dot-uncurated"}`} />
+              {technology}
+              <span className="visually-hidden">({status})</span>
+              <button
+                type="button"
+                className="chip-remove"
+                aria-label={t.setup.remove(technology)}
+                title={t.setup.remove(technology)}
+                onClick={() => remove(technology)}
+              >
+                ×
+              </button>
+            </li>
+          );
+        })}
+        <li>
+          <form className="technology-add" onSubmit={add}>
+            <input
+              value={newTechnology}
+              onChange={(event) => setNewTechnology(event.target.value)}
+              placeholder={t.setup.addPlaceholder}
+              aria-label={t.setup.addTechnology}
+              maxLength={40}
+            />
+          </form>
+        </li>
+      </ul>
+      {detection.technologies.length === 0 && <Hint>{t.setup.noTechnology}</Hint>}
+      {(anyCovered || anyUncurated) && (
+        <ul className="legend" aria-hidden="true">
+          {anyCovered && (
+            <li>
+              <span className="status-dot status-dot-covered" />
+              {t.setup.legendCovered}
+            </li>
+          )}
+          {anyUncurated && (
+            <li>
+              <span className="status-dot status-dot-uncurated" />
+              {t.setup.legendUncurated}
+            </li>
+          )}
         </ul>
       )}
-      {anyUncurated && <Hint>{t.setup.uncuratedHint}</Hint>}
 
-      <form className="field-row technology-add" onSubmit={add}>
-        <input
-          value={newTechnology}
-          onChange={(event) => setNewTechnology(event.target.value)}
-          placeholder={t.setup.addPlaceholder}
-          aria-label={t.setup.addTechnology}
-          maxLength={40}
-        />
-        <Button type="submit" disabled={newTechnology.trim() === ""}>
-          {t.setup.add}
-        </Button>
-      </form>
-
-      <label className="field">
+      <div className="level-row">
         <span className="field-label">{t.setup.level}</span>
-        <select
+        <Dropdown
+          label={t.setup.level}
           value={detection.level}
-          onChange={(event) => onChange({ ...detection, level: event.target.value as PackLevel })}
-        >
-          {levels.map((level) => (
-            <option key={level} value={level}>
-              {t.levels[level]}
-            </option>
-          ))}
-        </select>
-      </label>
+          onChange={(level) => onChange({ ...detection, level })}
+          options={levels.map((level) => ({ value: level, label: t.levels[level] }))}
+        />
+      </div>
       <Hint>{t.setup.levelHint}</Hint>
     </Card>
   );

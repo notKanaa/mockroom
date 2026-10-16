@@ -1118,54 +1118,64 @@ button.chip:disabled {
   gap: var(--s4);
 }
 
-.technologies {
-  display: flex;
-  flex-direction: column;
+.technology {
   gap: var(--s2);
+  padding-right: var(--s1);
+  font-weight: 400;
+}
+
+/* A dot tells whether a pack covers the technology; the legend under the list explains the colours. */
+.status-dot {
+  flex: none;
+  width: 8px;
+  height: 8px;
+  border-radius: var(--r-full);
+}
+
+.status-dot-covered {
+  background: var(--accent);
+}
+
+.status-dot-uncurated {
+  background: var(--warn);
+}
+
+.technology-add input {
+  width: 128px;
+  height: var(--h-sm);
+  padding: 0 var(--s3);
+  border-style: dashed;
+  border-radius: var(--r-full);
+  background: transparent;
+  font-size: var(--fs-sm);
+}
+
+.technology-add input:focus-visible {
+  border-style: solid;
+}
+
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s1) var(--s4);
   margin: 0;
   padding: 0;
+  color: var(--muted);
+  font-size: var(--fs-xs);
   list-style: none;
 }
 
-.technology {
-  display: flex;
-  flex-wrap: wrap;
+.legend li {
+  display: inline-flex;
   align-items: center;
-  gap: var(--s1) var(--s3);
-  min-height: var(--h-md);
-  padding: var(--s1) var(--s1) var(--s1) var(--s3);
-  border: 1px solid var(--line);
-  border-radius: var(--r-sm);
+  gap: var(--s2);
 }
 
-.technology-uncurated {
-  box-shadow: inset 3px 0 0 var(--warn);
-}
-
-.technology-name {
-  font-size: var(--fs-sm);
-  font-weight: 600;
-}
-
-.technology-pack {
-  color: var(--muted);
-  font-size: var(--fs-sm);
-}
-
-.technology-remove {
-  display: grid;
-  place-items: center;
-  width: var(--h-sm);
-  height: var(--h-sm);
-  margin-left: auto;
-  border-radius: var(--r-sm);
-  color: var(--muted);
-  font-size: var(--fs-lg);
-}
-
-.technology-remove:hover {
-  background: var(--raised);
-  color: var(--text);
+.level-row {
+  display: flex;
+  align-items: center;
+  gap: var(--s2);
+  margin-top: var(--s2);
 }
 
 .uncurated-badge {
@@ -1182,10 +1192,6 @@ button.chip:disabled {
 
 .feedback-theme .uncurated-badge {
   margin-left: var(--s2);
-}
-
-.detection select {
-  max-width: 240px;
 }
 
 .setup-summary {
