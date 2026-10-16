@@ -3,6 +3,7 @@ import type { AISettingsView, KeyedProviderName, ProviderName } from "../server/
 import { fetchSettings, listOllamaModels, saveSettings } from "./api";
 import { useI18n } from "./i18n";
 import { Dropdown, type DropdownOption } from "./kit";
+import { ProviderIcon } from "./ProviderIcons";
 
 interface ModelPickerProps {
   /** Opens the settings, where API keys are added. */
@@ -58,13 +59,19 @@ export function ModelPicker({ onOpenSettings, placement = "down" }: ModelPickerP
     options.push({
       value: "ollama:",
       label: "Ollama",
+      icon: <ProviderIcon provider="ollama" />,
       description: t.model.ollamaOff,
       disabled: true,
       group: t.model.local,
     });
   }
   for (const model of localModels) {
-    options.push({ value: `ollama:${model}`, label: model, group: t.model.local });
+    options.push({
+      value: `ollama:${model}`,
+      label: model,
+      icon: <ProviderIcon provider="ollama" />,
+      group: t.model.local,
+    });
   }
 
   for (const provider of view.providers) {
@@ -72,12 +79,14 @@ export function ModelPicker({ onOpenSettings, placement = "down" }: ModelPickerP
     const connected = view.apiKeys[provider.id as KeyedProviderName] !== null;
     const known = [active, view.saved].find((choice) => choice?.provider === provider.id);
     const model = known?.model ?? provider.defaultModel ?? "";
+    const icon = <ProviderIcon provider={provider.id} />;
     options.push(
       connected
-        ? { value: `${provider.id}:${model}`, label: `${provider.label} · ${model}`, group: t.model.online }
+        ? { value: `${provider.id}:${model}`, label: `${provider.label} · ${model}`, icon, group: t.model.online }
         : {
             value: `${provider.id}:`,
             label: provider.label,
+            icon,
             description: t.model.notConnected,
             disabled: true,
             group: t.model.online,

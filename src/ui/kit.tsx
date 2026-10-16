@@ -172,6 +172,8 @@ export interface DropdownOption<T extends string> {
   disabled?: boolean;
   /** Options with the same group are listed together under its name. */
   group?: string;
+  /** A small decorative icon before the label, also shown on the button when the option is chosen. */
+  icon?: ReactNode;
 }
 
 interface DropdownProps<T extends string> {
@@ -291,6 +293,7 @@ export function Dropdown<T extends string>({
         onClick={() => (open ? setOpen(false) : show())}
         onKeyDown={onButtonKeyDown}
       >
+        {chosen?.icon}
         <span className="ui-dropdown-value">{chosen?.label ?? placeholder}</span>
         <svg className="icon" viewBox="0 0 24 24" width="14" height="14" aria-hidden="true" focusable="false">
           <path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
@@ -322,8 +325,11 @@ export function Dropdown<T extends string>({
                   onPointerEnter={() => !option.disabled && setActive(index)}
                   onClick={() => pick(index)}
                 >
-                  <span className="ui-dropdown-label">{option.label}</span>
-                  {option.description && <span className="ui-dropdown-description">{option.description}</span>}
+                  {option.icon && <span className="ui-dropdown-icon">{option.icon}</span>}
+                  <span className="ui-dropdown-text">
+                    <span className="ui-dropdown-label">{option.label}</span>
+                    {option.description && <span className="ui-dropdown-description">{option.description}</span>}
+                  </span>
                   {option.value === value && (
                     <svg
                       className="icon ui-dropdown-check"
