@@ -1,10 +1,11 @@
-import { useId, useRef, useState, type FormEvent, type KeyboardEvent } from "react";
+import { useRef, useState, type FormEvent, type KeyboardEvent } from "react";
 import type { InterviewRequest, Language, PackSummary } from "../server/api-types";
 import { detectJobOffer } from "./api";
 import { languages, useI18n } from "./i18n";
 import { ArrowUpIcon, PlusIcon } from "./Icons";
 import { InterviewSetup, type Detection } from "./InterviewSetup";
-import { Banner, IconButton } from "./kit";
+import { Banner, Dropdown, IconButton } from "./kit";
+import { ModelPicker } from "./ModelPicker";
 import { useAutoGrow } from "./useAutoGrow";
 
 interface HomeProps {
@@ -112,6 +113,7 @@ export function Home({ packs, loadError, starting, error, onStart, onOpenSetting
             disabled={detecting}
           />
           <div className="prompt-bar">
+            <ModelPicker onOpenSettings={onOpenSettings} />
             <LanguagePicker value={interviewLanguage} onChange={setPickedLanguage} />
             {detecting && (
               <span className="prompt-status" role="status">
@@ -214,20 +216,27 @@ function PackChips({ packs, interviewLanguage, disabled, onPick, onCombine }: Pa
   );
 }
 
-/** The interview language, as a compact labelled drop-down. */
-export function LanguagePicker({ value, onChange }: { value: Language; onChange: (language: Language) => void }) {
+/** The interview language, as a compact drop-down after a short label. */
+export function LanguagePicker({
+  value,
+  onChange,
+  placement,
+}: {
+  value: Language;
+  onChange: (language: Language) => void;
+  placement?: "down" | "up";
+}) {
   const { t } = useI18n();
-  const id = useId();
   return (
     <span className="language-picker" title={t.setup.interviewLanguageHint}>
-      <label htmlFor={id}>{t.home.interviewIn}</label>
-      <select id={id} value={value} onChange={(event) => onChange(event.target.value as Language)}>
-        {languages.map((option) => (
-          <option key={option} value={option}>
-            {t.languageNames[option]}
-          </option>
-        ))}
-      </select>
+      <span aria-hidden="true">{t.home.interviewIn}</span>
+      <Dropdown
+        label={t.setup.interviewLanguage}
+        value={value}
+        onChange={onChange}
+        placement={placement}
+        options={languages.map((option) => ({ value: option, label: t.languageNames[option] }))}
+      />
     </span>
   );
 }

@@ -61,71 +61,72 @@ export function Sidebar({
 
   return (
     <nav className="sidebar" id="sidebar" aria-label={t.sidebar.label}>
-      <div className="sidebar-top">
-        <Brand />
-        <IconButton label={t.sidebar.hide} icon={<SidebarIcon />} onClick={onHide} aria-controls="sidebar" />
-      </div>
+      <div className="sidebar-inner">
+        <div className="sidebar-top">
+          <Brand />
+          <IconButton label={t.sidebar.hide} icon={<SidebarIcon />} onClick={onHide} aria-controls="sidebar" />
+        </div>
 
-      <button type="button" className="sidebar-row sidebar-new" onClick={onNewInterview}>
-        <PlusIcon />
-        {t.common.newInterview}
-      </button>
-
-      <div className="sidebar-history">
-        <h2 className="sidebar-heading">{t.sidebar.history}</h2>
-        {error && (
-          <p className="sidebar-note sidebar-error" role="alert">
-            {error}
-          </p>
-        )}
-        {!entries && !error && <p className="sidebar-note">{t.history.loading}</p>}
-        {entries?.length === 0 && <p className="sidebar-note">{t.history.empty}</p>}
-        {entries && entries.length > 0 && (
-          <ul className="history-list">
-            {entries.map((entry) => {
-              const title = interviewTitle(entry, t);
-              return (
-                <li key={entry.id} className="history-item">
-                  <button
-                    type="button"
-                    className="history-open"
-                    aria-current={entry.id === openId ? "page" : undefined}
-                    onClick={() => onOpen(entry.id)}
-                  >
-                    <span className="history-title">{title}</span>
-                    <span className="history-meta">
-                      {formatDateTime(entry.startedAt, language)}
-                      {!entry.hasDebrief && ` · ${t.history.noDebrief}`}
-                    </span>
-                  </button>
-                  <IconButton
-                    className="history-delete"
-                    label={t.sidebar.delete(title)}
-                    icon={<TrashIcon />}
-                    onClick={() => void remove(entry)}
-                    disabled={deletingId === entry.id}
-                  />
-                </li>
-              );
-            })}
-          </ul>
-        )}
-        <p className="sidebar-note">{t.history.privacy}</p>
-      </div>
-
-      <div className="sidebar-bottom">
-        <button
-          type="button"
-          className="sidebar-row"
-          onClick={onOpenSettings}
-          aria-current={settingsOpen ? "page" : undefined}
-        >
-          <GearIcon />
-          {t.common.settings}
+        <button type="button" className="sidebar-row sidebar-new" onClick={onNewInterview}>
+          <PlusIcon />
+          {t.common.newInterview}
         </button>
-        <div className="sidebar-switches">
-          <ThemeSwitch />
-          <LanguageSwitch />
+
+        <div className="sidebar-history">
+          <h2 className="sidebar-heading">{t.sidebar.history}</h2>
+          {error && (
+            <p className="sidebar-note sidebar-error" role="alert">
+              {error}
+            </p>
+          )}
+          {!entries && !error && <p className="sidebar-note">{t.history.loading}</p>}
+          {entries?.length === 0 && <p className="sidebar-note">{t.history.empty}</p>}
+          {entries && entries.length > 0 && (
+            <ul className="history-list">
+              {entries.map((entry) => {
+                const title = interviewTitle(entry, t);
+                return (
+                  <li key={entry.id} className="history-item">
+                    <button
+                      type="button"
+                      className="history-open"
+                      aria-current={entry.id === openId ? "page" : undefined}
+                      onClick={() => onOpen(entry.id)}
+                    >
+                      <span className="history-title">{title}</span>
+                      <span className="history-meta">
+                        {formatDateTime(entry.startedAt, language)}
+                        {!entry.hasDebrief && ` · ${t.history.noDebrief}`}
+                      </span>
+                    </button>
+                    <IconButton
+                      className="history-delete"
+                      label={t.sidebar.delete(title)}
+                      icon={<TrashIcon />}
+                      onClick={() => void remove(entry)}
+                      disabled={deletingId === entry.id}
+                    />
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </div>
+
+        <div className="sidebar-bottom">
+          <button
+            type="button"
+            className="sidebar-row"
+            onClick={onOpenSettings}
+            aria-current={settingsOpen ? "page" : undefined}
+          >
+            <GearIcon />
+            {t.common.settings}
+          </button>
+          <div className="sidebar-switches">
+            <ThemeSwitch />
+            <LanguageSwitch />
+          </div>
         </div>
       </div>
     </nav>

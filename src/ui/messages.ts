@@ -67,6 +67,17 @@ const en = {
     delete: (title: string) => `Delete ${title}`,
   },
 
+  model: {
+    label: "AI model",
+    local: "On this computer (Ollama)",
+    online: "Online, with your API key",
+    notConnected: "Not connected",
+    ollamaOff: "Ollama isn't running",
+    none: "Choose an AI",
+    connect: "Connect an AI…",
+    fromEnvironment: "Chosen by the MOCKROOM_PROVIDER environment variable",
+  },
+
   theme: {
     label: "Theme",
     system: "Match system",
@@ -153,7 +164,6 @@ const en = {
 
   history: {
     deletePrompt: "Delete this interview from your history? Its transcript and debrief will be gone for good.",
-    privacy: "Saved on this computer only. Nothing is sent anywhere.",
     loading: "Loading your interviews…",
     empty: "No interview yet. Once you finish or end one, it shows up here.",
     interviewIn: (language: string) => `In ${language}`,
@@ -278,6 +288,17 @@ const fr: UIMessages = {
     delete: (title) => `Supprimer ${title}`,
   },
 
+  model: {
+    label: "Modèle d'IA",
+    local: "Sur cet ordinateur (Ollama)",
+    online: "En ligne, avec ta clé d'API",
+    notConnected: "Non connecté",
+    ollamaOff: "Ollama n'est pas lancé",
+    none: "Choisir une IA",
+    connect: "Connecter une IA…",
+    fromEnvironment: "Choisi par la variable d'environnement MOCKROOM_PROVIDER",
+  },
+
   theme: {
     label: "Thème",
     system: "Comme le système",
@@ -365,7 +386,6 @@ const fr: UIMessages = {
 
   history: {
     deletePrompt: "Supprimer cet entretien de ton historique ? Sa transcription et son bilan seront définitivement perdus.",
-    privacy: "Enregistrés sur cet ordinateur uniquement. Rien n'est envoyé ailleurs.",
     loading: "Chargement de tes entretiens…",
     empty: "Aucun entretien pour l'instant. Dès que tu en termines un, il apparaît ici.",
     interviewIn: (language) => `En ${language.toLowerCase()}`,

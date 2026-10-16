@@ -178,7 +178,7 @@ export function InterviewSetup({
             {nothingChosen ? t.setup.nothingChosen : interviewTitle({ packs: selectedPacks, uncurated }, t)}
           </p>
         </div>
-        <LanguagePicker value={interviewLanguage} onChange={onLanguageChange} />
+        <LanguagePicker value={interviewLanguage} onChange={onLanguageChange} placement="up" />
         <Button variant="primary" disabled={starting || nothingChosen} onClick={start}>
           {starting ? t.setup.starting : t.setup.start}
         </Button>

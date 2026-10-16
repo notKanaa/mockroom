@@ -5,7 +5,15 @@
 // assistive technologies. Sizes, colours, radii and spacing live here and in
 // the matching `.ui-*` rules of styles.css, nowhere else.
 
-import type { ButtonHTMLAttributes, ReactNode } from "react";
+import {
+  useEffect,
+  useId,
+  useRef,
+  useState,
+  type ButtonHTMLAttributes,
+  type KeyboardEvent,
+  type ReactNode,
+} from "react";
 
 type ButtonVariant = "primary" | "secondary" | "ghost" | "danger";
 
@@ -153,5 +161,205 @@ export function Hint({ children, id, tone = "muted" }: { children: ReactNode; id
     <p id={id} className={`ui-hint ui-hint-${tone}`} role={tone === "error" ? "alert" : undefined}>
       {children}
     </p>
+  );
+}
+
+export interface DropdownOption<T extends string> {
+  value: T;
+  label: string;
+  /** A second line, e.g. why the option can't be picked. */
+  description?: string;
+  disabled?: boolean;
+  /** Options with the same group are listed together under its name. */
+  group?: string;
+}
+
+interface DropdownProps<T extends string> {
+  /** What is being chosen, for assistive technologies. */
+  label: string;
+  options: readonly DropdownOption<T>[];
+  /** The chosen value, or null when none is. */
+  value: T | null;
+  /** Shown on the button when no value is chosen. */
+  placeholder?: string;
+  onChange: (value: T) => void;
+  /** An action under the options, such as "Connect an AI…". */
+  footer?: { label: string; onClick: () => void };
+  /** Opens above the button, for controls at the bottom of the screen. */
+  placement?: "down" | "up";
+  disabled?: boolean;
+  /** Shown on hover, e.g. why the drop-down is disabled. */
+  title?: string;
+}
+
+/**
+ * A compact drop-down list, styled the same in both themes (unlike a native
+ * `<select>`), with groups, options that can't be picked yet, and an optional
+ * action at the bottom. Keyboard: arrows to move, Enter to pick, Escape to close.
+ */
+export function Dropdown<T extends string>({
+  label,
+  options,
+  value,
+  placeholder = "",
+  onChange,
+  footer,
+  placement = "down",
+  disabled = false,
+  title,
+}: DropdownProps<T>) {
+  const [open, setOpen] = useState(false);
+  const [active, setActive] = useState(-1);
+  const rootRef = useRef<HTMLDivElement>(null);
+  const buttonRef = useRef<HTMLButtonElement>(null);
+  const listRef = useRef<HTMLUListElement>(null);
+  const id = useId();
+  const chosen = options.find((option) => option.value === value);
+  const pickable = options.flatMap((option, index) => (option.disabled ? [] : [index]));
+
+  useEffect(() => {
+    if (!open) return;
+    listRef.current?.focus();
+    const onPointerDown = (event: PointerEvent) => {
+      if (!rootRef.current?.contains(event.target as Node)) setOpen(false);
+    };
+    document.addEventListener("pointerdown", onPointerDown);
+    return () => document.removeEventListener("pointerdown", onPointerDown);
+  }, [open]);
+
+  function show() {
+    const current = options.findIndex((option) => option.value === value && !option.disabled);
+    setActive(current >= 0 ? current : (pickable[0] ?? -1));
+    setOpen(true);
+  }
+
+  function close() {
+    setOpen(false);
+    buttonRef.current?.focus();
+  }
+
+  function pick(index: number) {
+    const option = options[index];
+    if (!option || option.disabled) return;
+    close();
+    if (option.value !== value) onChange(option.value);
+  }
+
+  function onButtonKeyDown(event: KeyboardEvent<HTMLButtonElement>) {
+    if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+      event.preventDefault();
+      show();
+    }
+  }
+
+  function onListKeyDown(event: KeyboardEvent<HTMLUListElement>) {
+    const position = pickable.indexOf(active);
+    if (event.key === "ArrowDown") {
+      event.preventDefault();
+      setActive(pickable[Math.min(position + 1, pickable.length - 1)] ?? active);
+    } else if (event.key === "ArrowUp") {
+      event.preventDefault();
+      setActive(pickable[Math.max(position - 1, 0)] ?? active);
+    } else if (event.key === "Home") {
+      event.preventDefault();
+      setActive(pickable[0] ?? active);
+    } else if (event.key === "End") {
+      event.preventDefault();
+      setActive(pickable.at(-1) ?? active);
+    } else if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      pick(active);
+    } else if (event.key === "Escape") {
+      event.preventDefault();
+      close();
+    } else if (event.key === "Tab") {
+      setOpen(false);
+    }
+  }
+
+  return (
+    <div className="ui-dropdown" ref={rootRef}>
+      <button
+        ref={buttonRef}
+        type="button"
+        className="ui-dropdown-button"
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        aria-label={`${label}: ${chosen?.label ?? placeholder}`}
+        title={title}
+        disabled={disabled}
+        onClick={() => (open ? setOpen(false) : show())}
+        onKeyDown={onButtonKeyDown}
+      >
+        <span className="ui-dropdown-value">{chosen?.label ?? placeholder}</span>
+        <svg className="icon" viewBox="0 0 24 24" width="14" height="14" aria-hidden="true" focusable="false">
+          <path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+        </svg>
+      </button>
+      {open && (
+        <div className={`ui-dropdown-panel ui-dropdown-${placement}`}>
+          <ul
+            ref={listRef}
+            role="listbox"
+            aria-label={label}
+            tabIndex={-1}
+            aria-activedescendant={active >= 0 ? `${id}-${active}` : undefined}
+            onKeyDown={onListKeyDown}
+          >
+            {options.map((option, index) => (
+              <li key={option.value} role="presentation">
+                {option.group && option.group !== options[index - 1]?.group && (
+                  <span className="ui-dropdown-group" aria-hidden="true">
+                    {option.group}
+                  </span>
+                )}
+                <div
+                  id={`${id}-${index}`}
+                  role="option"
+                  aria-selected={option.value === value}
+                  aria-disabled={option.disabled || undefined}
+                  className={`ui-dropdown-option${index === active ? " ui-dropdown-active" : ""}`}
+                  onPointerEnter={() => !option.disabled && setActive(index)}
+                  onClick={() => pick(index)}
+                >
+                  <span className="ui-dropdown-label">{option.label}</span>
+                  {option.description && <span className="ui-dropdown-description">{option.description}</span>}
+                  {option.value === value && (
+                    <svg
+                      className="icon ui-dropdown-check"
+                      viewBox="0 0 24 24"
+                      width="16"
+                      height="16"
+                      aria-hidden="true"
+                      focusable="false"
+                    >
+                      <path
+                        d="M5 12l5 5 9-10"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                      />
+                    </svg>
+                  )}
+                </div>
+              </li>
+            ))}
+          </ul>
+          {footer && (
+            <button
+              type="button"
+              className="ui-dropdown-footer"
+              onClick={() => {
+                setOpen(false);
+                footer.onClick();
+              }}
+            >
+              {footer.label}
+            </button>
+          )}
+        </div>
+      )}
+    </div>
   );
 }

@@ -3,6 +3,7 @@ import { interviewTitle, useI18n } from "./i18n";
 import { ArrowUpIcon } from "./Icons";
 import { Banner, Button, IconButton } from "./kit";
 import { Message } from "./Message";
+import { ModelPicker } from "./ModelPicker";
 import { RecruiterBadge, recruiterFor } from "./Recruiter";
 import { useAutoGrow } from "./useAutoGrow";
 import type { useInterview } from "./useInterview";
@@ -20,13 +21,14 @@ interface InterviewRoomProps {
 export function InterviewRoom({ session, onOpenSettings }: InterviewRoomProps) {
   const { interview, messages, streaming, error, ending, endError, debrief, draft, setDraft } = session;
   const { t } = useI18n();
-  const endRef = useRef<HTMLDivElement>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const finished = interview?.status === "finished";
   useAutoGrow(inputRef, draft);
 
   useEffect(() => {
-    endRef.current?.scrollIntoView({ block: "end" });
+    const scroller = scrollRef.current;
+    if (scroller) scroller.scrollTop = scroller.scrollHeight;
   }, [messages, finished, debrief.error]);
 
   useEffect(() => {
@@ -79,7 +81,7 @@ export function InterviewRoom({ session, onOpenSettings }: InterviewRoomProps) {
         )}
       </header>
 
-      <div className="room-scroll">
+      <div className="room-scroll" ref={scrollRef}>
         <div className="room-column">
           <ol className="chat" aria-label={t.room.conversation}>
             {messages.map((message, index) => {
@@ -133,7 +135,6 @@ export function InterviewRoom({ session, onOpenSettings }: InterviewRoomProps) {
               )}
             </div>
           )}
-          <div ref={endRef} />
         </div>
       </div>
 
@@ -151,17 +152,20 @@ export function InterviewRoom({ session, onOpenSettings }: InterviewRoomProps) {
               rows={1}
               disabled={streaming}
             />
-            <IconButton
-              type="submit"
-              variant="primary"
-              label={t.room.send}
-              icon={<ArrowUpIcon />}
-              disabled={streaming || draft.trim() === ""}
-            />
+            <div className="composer-bar">
+              <ModelPicker onOpenSettings={onOpenSettings} placement="up" />
+              <IconButton
+                type="submit"
+                variant="primary"
+                label={t.room.send}
+                icon={<ArrowUpIcon />}
+                disabled={streaming || draft.trim() === ""}
+              />
+            </div>
           </div>
-          <p id="composer-hint" className="composer-hint">
+          <span id="composer-hint" className="visually-hidden">
             {t.room.composerHint}
-          </p>
+          </span>
         </form>
       )}
     </main>
