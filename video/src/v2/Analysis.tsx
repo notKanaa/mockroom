@@ -36,12 +36,12 @@ export function knobRect(film: Film) {
   return { x: width / 2 + 72 * f, y: height / 2 + 123 * f, w: 144 * f, h: 84 * f };
 }
 
-/** A soft mesh of coloured light drifting behind the product. */
-export function Mesh() {
+/** A soft mesh of coloured light drifting behind the product, fading in from a frame on. */
+export function Mesh({ from = p2.morph }: { from?: number }) {
   const frame = useCurrentFrame();
   const film = useFilm();
   const { u, width, height } = film;
-  const show = progress(frame, p2.morph, 30, easeOut);
+  const show = progress(frame, from, 30, easeOut);
   if (show <= 0) return null;
   const blobs = [
     { x: 0.22, y: 0.3, size: 1100, color: "rgb(53 196 168 / 0.30)" },
