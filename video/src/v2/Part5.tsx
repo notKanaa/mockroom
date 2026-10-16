@@ -150,7 +150,7 @@ function Scene() {
           color: stage.text,
         }}
       >
-        {frame < p5.ollamaLine + 6 && <BlurWords text={copy.byok} frame={frame} start={p5.byok} exit={p5.ollamaLine - 8} />}
+        {frame < p5.ollamaLine + 6 && <BlurWords text={copy.byok} frame={frame} start={p5.byok} exit={p5.pick[3]! - 6} />}
         {frame >= p5.ollamaLine && frame < p5.implode + 10 && (
           <span style={{ color: stage.accent }}>
             <BlurWords text={copy.ollama} frame={frame} start={p5.ollamaLine} exit={p5.implode - 4} />
@@ -317,16 +317,18 @@ function Panel({ layout }: { layout: ReturnType<typeof layoutFor> }) {
   const current = picked(frame);
   const open = sp(frame, p5.key - 6, { damping: 15, stiffness: 140 });
   if (frame < p5.key - 8) return null;
-  const provider = providers[Math.max(0, current)]!;
+  // The key field keeps showing the last keyed provider while it gives way to Ollama.
+  const keyedIndex = Math.min(Math.max(0, current), 2);
+  const provider = providers[keyedIndex]!;
   const keyed = provider.id !== "ollama";
-  const keyStart = current <= 0 ? p5.key : p5.pick[current]! + 2;
+  const keyStart = keyedIndex === 0 ? p5.key : p5.pick[keyedIndex]! + 2;
   const masked = `${provider.key}${"•".repeat(14)}${provider.tail}`;
-  const shown = typed(masked, frame, keyStart, current <= 0 ? 0.9 : 2.2);
+  const shown = typed(masked, frame, keyStart, keyedIndex === 0 ? 0.9 : 2.2);
   const typing = shown.length < masked.length;
   const press = Math.max(0, 1 - Math.abs(frame - p5.test - 2) / 4);
   const connected = current === 0 && frame >= p5.connected ? sp(frame, p5.connected, { damping: 11, stiffness: 200 }) : 0;
-  const swap = progress(frame, p5.ollama - 2, 10, easeInOut);
-  const offline = sp(frame, p5.ollama + 14, { damping: 10, stiffness: 200 });
+  const swap = progress(frame, p5.ollama, 18, easeInOut);
+  const offline = sp(frame, p5.ollama + 22, { damping: 10, stiffness: 200 });
   const field: CSSProperties = {
     display: "flex",
     alignItems: "center",

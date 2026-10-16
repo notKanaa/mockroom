@@ -66,6 +66,14 @@ function tick(frequency: number, seed: number, length = 0.03): Float32Array {
   return tone.map((value, index) => value * 0.6 + click[index]! * 0.8);
 }
 
+/** A laptop key: a soft plastic click over a short, damped thock. */
+function keystroke(frequency: number, seed: number): Sound {
+  const sound = silence(0.12);
+  add(sound, filter(tick(frequency, seed, 0.03), "lp", () => 4500), 0, 0.7, (seed % 3) * 0.15 - 0.15);
+  add(sound, shape(osc(0.06, (t) => 320 - t * 1500), hit(0.001, 0.012)), 0.002, 0.35);
+  return master(sound, -3);
+}
+
 /** A light 120 BPM groove: soft kick, off-beat hats, a plucked bass, a chord stab per bar. */
 function grooveOf(beats: number): Sound {
     const beat = 0.5;
@@ -410,5 +418,23 @@ export const sounds: Record<string, () => Sound> = {
     layer(sound, whoosh(0.7, 300, 1200, -0.4, 0.4, 801, 0.5), 0, 0.6);
     const smooth: Sound = { left: filter(sound.left, "lp", () => 4200, 0.6), right: filter(sound.right, "lp", () => 4200, 0.6) };
     return master(reverb(smooth, 0.25, 0.8, 0.6), -2);
+  },
+
+  // A laptop key, in four slightly different voices so a run of them doesn't sound mechanical.
+  "key-1": () => keystroke(1730, 911),
+  "key-2": () => keystroke(1960, 922),
+  "key-3": () => keystroke(2190, 933),
+  "key-4": () => keystroke(2420, 944),
+
+  // The words dissolving: a soft, airy swell with a few faint glints, no crash.
+  dissolve: () => {
+    const length = 0.9;
+    const sound = whoosh(length, 2400, 700, -0.3, 0.3, 820, 0.25);
+    const next = random(821);
+    for (let index = 0; index < 8; index++) {
+      add(sound, shape(osc(0.3, () => 2600 + Math.abs(next()) * 2200), hit(0.004, 0.08)), 0.04 + Math.abs(next()) * 0.35, 0.05, next() * 0.8);
+    }
+    const soft: Sound = { left: filter(sound.left, "lp", () => 5000, 0.6), right: filter(sound.right, "lp", () => 5000, 0.6) };
+    return master(reverb(soft, 0.3, 0.8, 0.6), -3);
   },
 };

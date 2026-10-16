@@ -6,9 +6,8 @@
 // The effects are synthesised in code (scripts/sfx). scripts/mix.ts mixes all of
 // it into one track per language (`npm run mix`), which the film plays.
 
-import type { Locale } from "../content/locales";
+import type { Locale, LocaleContent } from "../content/locales";
 import { p1, p2, p4, p5, PART1_FRAMES, PART2_FRAMES, PART3_FRAMES, PART4_FRAMES, part3Beats } from "./beats";
-import type { Film } from "../lib/film";
 
 const FPS = 30;
 /** Where each part starts in the film, in frames. */
@@ -53,20 +52,38 @@ export interface Effect {
 }
 
 /** Levels per family, in dB: impacts lead, whooshes support, the interface stays discreet. */
-const level = { impact: -2, whoosh: -7, ui: -14, chime: -11, texture: -17 };
+const level = { impact: -4, whoosh: -9, ui: -15, chime: -12, texture: -19 };
+
+/**
+ * A key press for each character as it appears on screen (`typed` reveals char i at
+ * start + i / charsPerFrame), at most one every two frames, in four alternating voices.
+ */
+function keystrokes(start: number, count: number, charsPerFrame: number, gain = level.ui - 2): Effect[] {
+  const out: Effect[] = [];
+  let last = -Infinity;
+  for (let index = 1; index <= count; index++) {
+    const frame = start + index / charsPerFrame;
+    if (frame - last < 2) continue;
+    last = frame;
+    out.push({ sound: `key-${((index * 7) % 4) + 1}`, frame: Math.round(frame), gain: gain + (((index * 5) % 3) - 1) * 1.5 });
+  }
+  return out;
+}
 
 /** The effects, each on the frame where its picture peaks (frames of the whole film). */
-export function finalEffects(sample: Film["sample"]): Effect[] {
+export function finalEffects(content: Pick<LocaleContent, "film" | "sample">): Effect[] {
+  const { film, sample } = content;
   const p3 = part3Beats(sample);
   const one = (sound: string, frame: number, gain: number, align: "hit" | "start" = "hit"): Effect => ({ sound, frame, gain, align });
+  const masked = (prefix: string) => prefix.length + 14 + 4;
   return [
-    // Part 1. The heartbeat, the slam, the burst and the dive, the reels, the soft cut, the flood, the mark, the fly-through.
-    one("heartbeat", at.p1 + p1.beats[0]! + 1, level.impact),
-    one("heartbeat", at.p1 + p1.beats[1]! + 1, level.impact),
-    ...p1.beats.slice(2).map((beat, index) => one("heartbeat-fast", at.p1 + beat + 1, level.whoosh - 4 + index)),
-    one("slam", at.p1 + p1.slam + 3, level.impact),
-    one("burst", at.p1 + p1.burst + 1, level.whoosh),
-    one("dive", at.p1 + 122, level.whoosh),
+    // Part 1. One soft thump per heartbeat (on the pulse's peak), the words, their dissolve and the dive,
+    // the coach question typed, the reels, the soft cut, the flood, the mark, the fly-through.
+    ...p1.beats.map((beat, index) => one("heartbeat-fast", at.p1 + beat + 2, index < 2 ? level.impact - 2 : level.whoosh + 1)),
+    one("slam", at.p1 + p1.slam + 6, level.impact - 8),
+    one("dissolve", at.p1 + p1.burst + 8, level.whoosh - 1),
+    one("dive", at.p1 + 122, level.whoosh - 2),
+    ...keystrokes(at.p1 + p1.kicker, film.problem.costKicker.length, 1.6),
     one("reel-spin", at.p1 + p1.reels, level.texture, "start"),
     ...p1.stops.map((stop) => one("reel-stop", at.p1 + stop, level.ui)),
     one("soft-swish", at.p1 + p1.slash + 4, level.whoosh),
@@ -80,7 +97,6 @@ export function finalEffects(sample: Film["sample"]): Effect[] {
     one("clap", at.p2 + p2.clap, level.ui + 4),
     one("toggle", at.p2 + p2.toggle + 1, level.ui + 2),
     one("expand", at.p2 + p2.morph + 14, level.whoosh - 2),
-    one("typing", at.p2 + p2.words, level.texture, "start"),
     one("click", at.p2 + p2.send + 1, level.ui + 2),
     one("shimmer", at.p2 + p2.glow, level.texture, "start"),
     ...p2.marks.map((mark) => one("mark", at.p2 + mark + 4, level.ui)),
@@ -88,10 +104,10 @@ export function finalEffects(sample: Film["sample"]): Effect[] {
     one("chip-land", at.p2 + p2.pack + 6, level.ui - 2),
     one("click", at.p2 + p2.start + 2, level.ui + 2),
     one("flood", at.p2 + p2.burst + 12, level.whoosh - 2),
-    // Part 3. The iris closes, the avatar flies to the header, the answer is typed and sent, the follow-up.
+    // Part 3. The iris closes, the avatar flies to the header, the answer is typed key by key and sent, the follow-up.
     one("collapse", at.p3 + 14, level.whoosh - 4),
     one("whoosh-in", at.p3 + 30, level.whoosh - 4),
-    one("typing", at.p3 + p3.typing, level.texture, "start"),
+    ...keystrokes(at.p3 + p3.typing, sample.answer.length, 3),
     one("click", at.p3 + p3.send - 1, level.ui + 2),
     one("chip-fly", at.p3 + p3.send + 6, level.ui),
     one("mark", at.p3 + p3.followUp + 2, level.ui + 2),
@@ -100,54 +116,64 @@ export function finalEffects(sample: Film["sample"]): Effect[] {
     one("swap", at.p4 + p4.cards[1]! + 6, level.whoosh - 4),
     one("collapse", at.p4 + p4.collapse + 10, level.whoosh - 2),
     one("chip-land", at.p4 + p4.file + 6, level.ui),
-    // Part 5. The title, each pick, the key typed and connected, the implosion, the terminal, Enter, the mark.
-    one("slam", at.p5 + p5.title + 3, level.impact - 3),
+    // Part 5. The title, each pick, each key typed, connected, the implosion, the command typed, Enter, the mark.
+    one("slam", at.p5 + p5.title + 3, level.impact - 6),
     ...p5.pick.map((pick) => one("toggle", at.p5 + pick + 1, level.ui)),
-    one("typing", at.p5 + p5.key, level.texture, "start"),
+    ...keystrokes(at.p5 + p5.key, masked("sk-proj-"), 0.9),
+    ...keystrokes(at.p5 + p5.pick[1]! + 2, masked("sk-ant-"), 2.2, level.ui - 5),
+    ...keystrokes(at.p5 + p5.pick[2]! + 2, masked("AIza"), 2.2, level.ui - 5),
     one("click", at.p5 + p5.test + 2, level.ui + 2),
     one("free-chime", at.p5 + p5.connected, level.chime, "start"),
     one("collapse", at.p5 + p5.implode + 14, level.whoosh - 2),
     one("ring-pop", at.p5 + p5.pill + 2, level.ui + 2),
     one("expand", at.p5 + p5.terminal + 8, level.whoosh - 4),
-    one("typing", at.p5 + p5.typing, level.texture + 2, "start"),
+    ...keystrokes(at.p5 + p5.typing, film.cta.command.length, 0.55, level.ui),
     one("click", at.p5 + p5.enter, level.ui + 4),
     one("whip", at.p5 + p5.knock + 8, level.whoosh - 2),
     one("dock", at.p5 + p5.mark + 8, level.impact),
   ];
 }
 
-/** The voice-over: one short line per idea, in the film's quieter moments. Times are in seconds of the film. */
-export const voiceLines: Record<Locale, { id: string; at: number; text: string }[]> = {
+type Part = keyof typeof at;
+
+/** The voice-over: one short line per idea, in the film's quieter moments. `at` is in seconds from the start of its part. */
+const voiceScript: Record<Locale, { id: string; part: Part; at: number; text: string }[]> = {
   en: [
-    { id: "01", at: 1.0, text: "Technical interviews are stressful." },
-    { id: "02", at: 4.0, text: "And practising with a coach can cost up to a hundred and fifty dollars a month." },
-    { id: "03", at: 9.1, text: "Meet Mockroom." },
-    { id: "04", at: 10.6, text: "Free, open source, in English and French." },
-    { id: "05", at: 14.0, text: "Paste a job offer…" },
-    { id: "06", at: 16.2, text: "and it picks out the tech the role needs." },
-    { id: "07", at: 22.0, text: "An AI recruiter interviews you…" },
-    { id: "08", at: 27.2, text: "and digs deeper, like a real one." },
-    { id: "09", at: 32.0, text: "Then you get a clear debrief: what went well, and what to review." },
-    { id: "10", at: 42.8, text: "Bring your own API key. It stays on your machine." },
-    { id: "11", at: 46.7, text: "Or run it free and offline, with Ollama." },
-    { id: "12", at: 49.4, text: "No account. Your interviews stay on your computer." },
-    { id: "13", at: 52.5, text: "Mockroom. Rehearse the interview, not the panic." },
+    { id: "01", part: "p1", at: 1.0, text: "Technical interviews are stressful." },
+    { id: "02", part: "p1", at: 4.0, text: "And practising with a coach can cost up to a hundred and fifty dollars a month." },
+    { id: "03", part: "p1", at: 9.1, text: "Meet Mockroom." },
+    { id: "04", part: "p2", at: 0.6, text: "Free, open source, in English and French." },
+    { id: "05", part: "p2", at: (p2.prompt - 4) / FPS, text: "Paste a job offer…" },
+    { id: "06", part: "p2", at: p2.marks[0]! / FPS, text: "and it picks out the tech the role needs." },
+    { id: "07", part: "p3", at: 0.5, text: "An AI recruiter interviews you…" },
+    { id: "08", part: "p3", at: 5.7, text: "and digs deeper, like a real one." },
+    { id: "09", part: "p4", at: 0.5, text: "Then you get a clear debrief: what went well, and what to review." },
+    { id: "10", part: "p5", at: 2.3, text: "Bring your own API key. It stays on your machine." },
+    { id: "11", part: "p5", at: 6.2, text: "Or run it free and offline, with Ollama." },
+    { id: "12", part: "p5", at: 8.9, text: "No account. Your interviews stay on your computer." },
+    { id: "13", part: "p5", at: 12.0, text: "Mockroom. Rehearse the interview, not the panic." },
   ],
   fr: [
-    { id: "01", at: 1.0, text: "Les entretiens techniques, c'est stressant." },
-    { id: "02", at: 4.0, text: "Et s'entraîner avec un coach peut coûter jusqu'à cent cinquante dollars par mois." },
-    { id: "03", at: 9.1, text: "Voici Mockroom." },
-    { id: "04", at: 10.6, text: "Gratuit, open source, en français et en anglais." },
-    { id: "05", at: 14.15, text: "Colle une offre d'emploi…" },
-    { id: "06", at: 16.2, text: "il repère les technos que le poste demande." },
-    { id: "07", at: 22.0, text: "Un recruteur IA te fait passer l'entretien…" },
-    { id: "08", at: 27.2, text: "et creuse, comme un vrai." },
-    { id: "09", at: 32.0, text: "Puis tu reçois un bilan clair : ce qui allait, et quoi réviser." },
-    { id: "10", at: 42.3, text: "Utilise ta propre clé d'API. Elle reste sur ta machine." },
-    { id: "11", at: 46.4, text: "Ou gratuit et hors ligne, avec Ollama." },
-    { id: "12", at: 49.1, text: "Pas de compte. Tes entretiens restent sur ton ordi." },
-    { id: "13", at: 52.45, text: "Mockroom. Répète l'entretien, pas la panique." },
+    { id: "01", part: "p1", at: 1.0, text: "Les entretiens techniques, c'est stressant." },
+    { id: "02", part: "p1", at: 4.0, text: "Et s'entraîner avec un coach peut coûter jusqu'à cent cinquante dollars par mois." },
+    { id: "03", part: "p1", at: 9.1, text: "Voici Mockroom." },
+    { id: "04", part: "p2", at: 0.6, text: "Gratuit, open source, en français et en anglais." },
+    { id: "05", part: "p2", at: (p2.prompt - 4) / FPS + 0.15, text: "Colle une offre d'emploi…" },
+    { id: "06", part: "p2", at: p2.marks[0]! / FPS, text: "il repère les technos que le poste demande." },
+    { id: "07", part: "p3", at: 0.5, text: "Un recruteur IA te fait passer l'entretien…" },
+    { id: "08", part: "p3", at: 5.7, text: "et creuse, comme un vrai." },
+    { id: "09", part: "p4", at: 0.5, text: "Puis tu reçois un bilan clair : ce qui allait, et quoi réviser." },
+    { id: "10", part: "p5", at: 1.8, text: "Utilise ta propre clé d'API. Elle reste sur ta machine." },
+    { id: "11", part: "p5", at: 5.9, text: "Ou gratuit et hors ligne, avec Ollama." },
+    { id: "12", part: "p5", at: 8.6, text: "Pas de compte. Tes entretiens restent sur ton ordi." },
+    { id: "13", part: "p5", at: 11.95, text: "Mockroom. Répète l'entretien, pas la panique." },
   ],
+};
+
+/** The voice-over lines with their time in the whole film, in seconds. */
+export const voiceLines: Record<Locale, { id: string; at: number; text: string }[]> = {
+  en: voiceScript.en.map((line) => ({ ...line, at: seconds(at[line.part]) + line.at })),
+  fr: voiceScript.fr.map((line) => ({ ...line, at: seconds(at[line.part]) + line.at })),
 };
 
 /** A voice line's file, in public/audio/final/. */

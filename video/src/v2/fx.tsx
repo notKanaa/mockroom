@@ -140,7 +140,8 @@ export function Streak({
   const t = (frame - at) / duration;
   if (t < 0 || t > 1) return null;
   const grow = 1 - (1 - t) ** 4;
-  const width = length * (0.25 + 0.75 * grow);
+  // Kept subtle: a hint of a lens flare, not a line across the frame.
+  const width = length * 0.6 * (0.25 + 0.75 * grow);
   return (
     <div
       style={{
@@ -151,9 +152,9 @@ export function Streak({
         height: thickness,
         borderRadius: thickness,
         background: `linear-gradient(90deg, transparent, ${color} 35%, #ffffff 50%, ${color} 65%, transparent)`,
-        filter: `blur(${thickness * 0.6}px)`,
-        boxShadow: `0 0 ${thickness * 6}px ${color}`,
-        opacity: (1 - t) ** 1.4,
+        filter: `blur(${thickness * 1.2}px)`,
+        boxShadow: `0 0 ${thickness * 4}px ${color}`,
+        opacity: 0.35 * (1 - t) ** 2,
         pointerEvents: "none",
       }}
     />

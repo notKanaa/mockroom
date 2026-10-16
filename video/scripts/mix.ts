@@ -177,6 +177,37 @@ function eq(sound: Sound, low: number, high: number): Sound {
   return { left: band(sound.left), right: band(sound.right) };
 }
 
+// The music, fitted to the film
+
+/**
+ * The music was composed for the film before part 2's promises were slowed down by
+ * three beats. Repeating one bar of its groove there, cut on a kick, keeps every
+ * later section (the break, the final build, the resolve) on its picture.
+ */
+const SPLICE = { at: 12.03, length: 1.5 };
+
+function lengthen(music: Sound): Sound {
+  const at = Math.round(SPLICE.at * SR);
+  const length = Math.round(SPLICE.length * SR);
+  const fade = Math.round(0.012 * SR);
+  const out = silence(music.left.length / SR + SPLICE.length);
+  for (const [from, to] of [
+    [music.left, out.left],
+    [music.right, out.right],
+  ] as const) {
+    // The bar before the cut, played twice: its end leads straight back into what follows.
+    to.set(from.subarray(0, at), 0);
+    to.set(from.subarray(at - length, at), at);
+    to.set(from.subarray(at), at + length);
+    // Only the first seam jumps back in time: a short crossfade hides it.
+    for (let index = 0; index < fade; index++) {
+      const t = index / fade;
+      to[at + index] = from[at + index]! * (1 - t) + from[at - length + index]! * t;
+    }
+  }
+  return out;
+}
+
 // The mix
 
 /** Each synthesised effect, made once, levelled, with where its peak falls. */
@@ -195,7 +226,6 @@ function effect(name: string) {
 }
 
 function mix(locale: Locale) {
-  const sample = locales[locale].sample;
   const final = (name: string) => path.resolve("public/audio/final", `${name}.mp3`);
 
   // The voice: each line levelled to the same loudness, then lightly compressed.
@@ -211,7 +241,7 @@ function mix(locale: Locale) {
   const duck = (index: number, depth: number) => 1 - depth * Math.min(1, speaking[index]! / db(-26));
 
   // The music: one level for the whole piece, ducked under the voice and dipped for the break.
-  const musicRaw = decode(final("music"));
+  const musicRaw = lengthen(decode(final("music")));
   const musicLevel = db(-21) / Math.max(loudness(musicRaw), 1e-6);
   const music = silence(LENGTH + 1);
   for (let index = 0; index < Math.min(music.left.length, musicRaw.left.length); index++) {
@@ -222,7 +252,7 @@ function mix(locale: Locale) {
 
   // The effects: each one's peak on its frame, through one bus.
   const effects = silence(LENGTH + 1);
-  for (const cue of finalEffects(sample)) {
+  for (const cue of finalEffects(locales[locale])) {
     const { sound, peakAt } = effect(cue.sound);
     const at = cue.frame / FPS - (cue.align === "start" ? 0 : peakAt);
     place(effects, sound, Math.max(0, at), db(cue.gain));
@@ -231,7 +261,7 @@ function mix(locale: Locale) {
   const room = reverb(eq(effects, 45, 7500), 0.18, 0.78, 1);
   const effectsBus = silence(LENGTH + 1);
   for (let index = 0; index < effectsBus.left.length; index++) {
-    const gain = db(4) * duck(index, 0.35);
+    const gain = db(2) * duck(index, 0.6);
     effectsBus.left[index] = room.left[index]! * gain;
     effectsBus.right[index] = room.right[index]! * gain;
   }
