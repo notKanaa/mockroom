@@ -6,7 +6,7 @@ import { InterviewClient } from "./support/interview-client.js";
 import { ScriptedModel } from "./support/scripted-model.js";
 import { startTestServer } from "./support/test-server.js";
 
-// React junior (built in), plus Python junior (en), Python mid (fr) and Rust senior (en).
+// The built-in packs (React and Symfony), plus Python junior (en), Python mid (fr) and Rust senior (en).
 const packs = [
   ...loadPacks().packs,
   ...loadPacks(join(import.meta.dirname, "fixtures", "packs", "valid")).packs,
@@ -50,7 +50,7 @@ describe("Job offer detection API", () => {
     const [system, offer] = model.calls[0]!;
     expect(system?.content).toContain('{"technologies":["...","..."],"level":"junior"}');
     // The packs' technologies are given, so the model spells them the same way.
-    expect(system?.content).toContain("write it exactly like this: React, Python, Rust.");
+    expect(system?.content).toContain("write it exactly like this: React, Symfony, Python, Rust.");
     expect(offer?.content).toContain("we build our web app with React and TypeScript");
   });
 

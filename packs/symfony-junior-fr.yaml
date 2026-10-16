@@ -1,0 +1,139 @@
+id: symfony-junior-fr
+technology: Symfony
+level: junior
+language: fr
+title: Symfony — Junior
+
+# Rédigé pour Symfony 7.4 (LTS). La documentation officielle n'existe qu'en anglais.
+themes:
+  - name: Routage et contrôleurs
+    questions:
+      - Comment associe-t-on une URL à un contrôleur dans Symfony, et que doit renvoyer ce contrôleur ?
+      - Votre route contient l'identifiant d'un produit. Comment le récupérez-vous dans le contrôleur, et comment faire pour que la route n'accepte que des nombres ?
+    key_points:
+      - "On déclare généralement la route avec l'attribut #[Route] sur une méthode du contrôleur, avec un chemin, un nom et éventuellement les méthodes HTTP acceptées ; le YAML ou le PHP restent possibles"
+      - Un contrôleur reçoit la requête et doit renvoyer un objet Response
+      - En héritant d'AbstractController, on dispose de raccourcis comme render(), json(), redirectToRoute() ou createNotFoundException()
+      - "Un paramètre comme {id} est transmis à l'argument du contrôleur qui porte le même nom ; une contrainte comme {id<\\d+>} limite ce qu'il accepte"
+      - On génère les liens à partir du nom de la route (generateUrl() en PHP, path() en Twig) plutôt que de les écrire en dur, pour pouvoir changer un chemin sans casser les liens
+      - La commande php bin/console debug:router liste toutes les routes avec leur nom, leurs méthodes et leur chemin
+    resources:
+      - title: Le routage
+        url: https://symfony.com/doc/7.4/routing.html
+      - title: Les contrôleurs
+        url: https://symfony.com/doc/7.4/controller.html
+
+  - name: Services et injection de dépendances
+    questions:
+      - "Qu'est-ce que le conteneur de services, et comment l'autowiring sait-il quoi injecter ?"
+      - Vous devez envoyer un e-mail depuis un contrôleur. Comment récupérez-vous le mailer, et pourquoi ne pas l'instancier avec new ?
+    key_points:
+      - Un service est un objet qui remplit une tâche (envoyer des e-mails, accéder aux données, ou une de vos propres classes) ; le conteneur le crée et partage par défaut la même instance
+      - Avec le config/services.yaml par défaut, toutes les classes de src/ sont déclarées comme services, avec autowire et autoconfigure activés
+      - L'autowiring lit le type des arguments du constructeur (classe ou interface) et injecte le service correspondant ; une action de contrôleur peut aussi recevoir des services en argument
+      - Les services sont privés par défaut, on les injecte au lieu d'aller les chercher dans le conteneur
+      - Une classe qui reçoit ses dépendances est plus facile à tester et à reconfigurer qu'une classe qui les crée elle-même avec new
+      - "Une valeur scalaire (paramètre, variable d'environnement) ne peut pas être devinée : on la passe avec bind dans services.yaml ou avec l'attribut #[Autowire]"
+      - La commande php bin/console debug:autowiring liste les types utilisables pour l'injection
+    resources:
+      - title: Le conteneur de services
+        url: https://symfony.com/doc/7.4/service_container.html
+      - title: L'autowiring
+        url: https://symfony.com/doc/7.4/service_container/autowiring.html
+
+  - name: Doctrine ORM
+    questions:
+      - Vous ajoutez une nouvelle entité au projet. Comment créez-vous sa table, et comment garder le schéma de la base identique entre les développeurs et la production ?
+      - Quelle est la différence entre persist() et flush() dans Doctrine ?
+    key_points:
+      - "Une entité est une classe PHP associée à une table grâce à des attributs comme #[ORM\\Entity], #[ORM\\Id] et #[ORM\\Column] ; make:entity peut la générer"
+      - Les changements de schéma passent par des migrations, générées à partir du mapping avec make:migration (ou doctrine:migrations:diff) et exécutées avec doctrine:migrations:migrate
+      - Les migrations sont versionnées avec le code et jouées sur chaque environnement ; doctrine:schema:update n'est pas fait pour la production
+      - persist() demande à l'entity manager de suivre un nouvel objet ; flush() calcule les changements de tous les objets suivis et exécute les requêtes SQL
+      - Un objet récupéré depuis la base est déjà suivi, il suffit de le modifier puis d'appeler flush() pour l'enregistrer
+      - Chaque entité a un repository avec find(), findBy(), findOneBy() et findAll() ; les requêtes sur mesure s'écrivent dans des méthodes du repository, avec le QueryBuilder ou en DQL
+    resources:
+      - title: Bases de données et Doctrine ORM
+        url: https://symfony.com/doc/7.4/doctrine.html
+
+  - name: Formulaires et validation
+    questions:
+      - Expliquez-moi comment vous traitez l'envoi d'un formulaire dans un contrôleur Symfony.
+      - Comment vous assurez-vous que l'e-mail saisi par un utilisateur n'est pas vide et qu'il est valide ?
+    key_points:
+      - Un type de formulaire est une classe qui hérite d'AbstractType, ajoute ses champs dans buildForm() et définit data_class dans configureOptions()
+      - Le contrôleur crée le formulaire avec createForm(), appelle handleRequest() avec la requête, puis vérifie isSubmitted() et isValid() avant d'enregistrer
+      - Après un envoi réussi, on redirige l'utilisateur pour qu'un rafraîchissement de la page ne renvoie pas le formulaire
+      - "Les règles de validation sont des contraintes posées sur l'objet, par exemple #[Assert\\NotBlank] et #[Assert\\Email] sur une propriété ; c'est isValid() qui les vérifie"
+      - Le validateur s'utilise aussi hors des formulaires, avec ValidatorInterface::validate(), qui renvoie la liste des violations
+      - Les formulaires ont une protection CSRF intégrée (un jeton caché vérifié à l'envoi), dès que le composant Security CSRF est installé et activé
+    resources:
+      - title: Les formulaires
+        url: https://symfony.com/doc/7.4/forms.html
+      - title: La validation
+        url: https://symfony.com/doc/7.4/validation.html
+
+  - name: Templates Twig
+    questions:
+      - Comment partagez-vous une mise en page commune, avec l'en-tête et le pied de page, entre plusieurs pages Twig ?
+      - Pourquoi faut-il se méfier du filtre raw dans Twig ?
+    key_points:
+      - "{{ }} affiche une valeur, {% %} exécute de la logique (if, for, block…) et {# #} sert aux commentaires"
+      - "Un template enfant utilise {% extends 'base.html.twig' %} et redéfinit les blocs prévus par le layout parent"
+      - include() réutilise un morceau de template ; un contrôleur affiche un template avec $this->render() et un tableau de variables
+      - Twig échappe automatiquement ce qu'il affiche, ce qui protège des failles XSS ; le filtre raw désactive cet échappement et ne doit servir que pour du contenu de confiance
+      - path() et url() génèrent des liens à partir du nom des routes, asset() construit l'URL des fichiers statiques, et la variable app donne accès à app.user, app.request et aux messages flash
+    resources:
+      - title: Créer et utiliser des templates
+        url: https://symfony.com/doc/7.4/templates.html
+      - title: Twig pour les intégrateurs
+        url: https://twig.symfony.com/doc/3.x/templates.html
+
+  - name: Sécurité
+    questions:
+      - Comment réservez-vous une page aux administrateurs ?
+      - Quelle est la différence entre authentification et autorisation dans Symfony, et quel est le rôle du firewall ?
+    key_points:
+      - L'authentification vérifie qui est l'utilisateur, via le firewall et ses authenticators comme form_login ; l'autorisation vérifie ce qu'il a le droit de faire
+      - "La sécurité se configure dans config/packages/security.yaml : user providers, password hashers, firewalls et access_control"
+      - Un seul firewall est actif par requête, le premier dont le pattern correspond ; le firewall dev fourni par défaut désactive la sécurité pour le profiler et les assets
+      - La classe utilisateur implémente UserInterface (getUserIdentifier(), getRoles()) et PasswordAuthenticatedUserInterface ; les mots de passe sont hachés avec UserPasswordHasherInterface, le hasher 'auto' choisissant le meilleur algorithme
+      - "On contrôle l'accès avec des règles access_control sur les URL (seule la première règle qui correspond s'applique), l'attribut #[IsGranted('ROLE_ADMIN')], denyAccessUnlessGranted() dans un contrôleur ou is_granted() dans Twig"
+      - Les rôles sont des chaînes qui commencent par ROLE_ ; role_hierarchy permet par exemple à ROLE_ADMIN d'inclure d'autres rôles
+    resources:
+      - title: La sécurité
+        url: https://symfony.com/doc/7.4/security.html
+      - title: Hachage et vérification des mots de passe
+        url: https://symfony.com/doc/7.4/security/passwords.html
+
+  - name: Configuration et environnements
+    questions:
+      - "Qu'est-ce qu'un environnement Symfony, et comment modifiez-vous un réglage uniquement pour la production ?"
+      - Où doit se trouver le mot de passe de la base de données dans un projet Symfony ?
+    key_points:
+      - L'environnement est défini par APP_ENV (dev, prod et test sont fournis) ; APP_DEBUG active ou désactive le mode debug
+      - La configuration se trouve dans config/packages/ ; les fichiers de config/packages/<env>/ ou les clés when@<env> la surchargent pour un seul environnement
+      - Le fichier .env contient les valeurs par défaut versionnées ; .env.local contient les valeurs propres à la machine, n'est pas versionné et est ignoré en environnement de test ; les vraies variables d'environnement l'emportent sur les fichiers .env
+      - "La configuration lit les variables d'environnement avec %env(DATABASE_URL)% et les paramètres avec %nom_du_parametre%"
+      - Les mots de passe et les clés d'API vont dans de vraies variables d'environnement ou dans le coffre-fort de secrets, jamais en clair dans un .env versionné
+      - La configuration est compilée dans le cache, il faut donc lancer cache:clear en production après un déploiement
+    resources:
+      - title: Configurer Symfony
+        url: https://symfony.com/doc/7.4/configuration.html
+      - title: Protéger les informations sensibles (secrets)
+        url: https://symfony.com/doc/7.4/configuration/secrets.html
+
+  - name: Tests
+    questions:
+      - Quels types de tests automatisés peut-on écrire dans une application Symfony ?
+      - Comment testeriez-vous que la page d'accueil répond correctement et affiche son titre ?
+    key_points:
+      - Les tests utilisent PHPUnit, se trouvent dans le dossier tests/ et se lancent avec php bin/phpunit
+      - Les tests unitaires héritent de TestCase et testent une classe isolément
+      - Les tests d'intégration héritent de KernelTestCase et récupèrent les vrais services avec static::getContainer()
+      - Les tests applicatifs héritent de WebTestCase ; createClient() envoie des requêtes, puis des assertions comme assertResponseIsSuccessful() ou assertSelectorTextContains() vérifient la réponse
+      - Les tests tournent dans l'environnement de test (APP_ENV=test, configuré dans .env.test), en général avec une base de données dédiée
+      - loginUser() connecte un utilisateur dans un test applicatif sans passer par le formulaire de connexion
+    resources:
+      - title: Les tests
+        url: https://symfony.com/doc/7.4/testing.html

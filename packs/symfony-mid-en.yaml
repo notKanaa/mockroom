@@ -1,0 +1,160 @@
+id: symfony-mid-en
+technology: Symfony
+level: mid
+language: en
+title: Symfony — Mid-level
+
+# Written against Symfony 7.4 (LTS). Links point to the 7.4 documentation.
+themes:
+  - name: Request lifecycle and events
+    questions:
+      - Walk me through what the HttpKernel does between receiving a Request and sending the Response.
+      - When would you use an event listener or subscriber, and how do you control the order in which listeners run?
+    key_points:
+      - The kernel dispatches kernel.request, then kernel.controller and kernel.controller_arguments, calls the controller, then dispatches kernel.response; kernel.terminate runs after the response is sent
+      - kernel.view only runs when the controller doesn't return a Response, and kernel.exception runs when an exception is thrown, to turn it into a response
+      - A kernel.request listener can set a response to answer early, for example for a maintenance page, and the controller is then skipped
+      - "Listeners are registered with #[AsEventListener] or the kernel.event_listener tag; subscribers implement EventSubscriberInterface and list their events in getSubscribedEvents()"
+      - Listeners with a higher priority run first (the default is 0), and stopPropagation() stops the remaining listeners
+      - Listeners on kernel events usually check isMainRequest() to ignore sub-requests
+      - Dispatching your own event objects decouples the code that triggers something from the code that reacts to it; debug:event-dispatcher lists the registered listeners
+    resources:
+      - title: Events and Event Listeners
+        url: https://symfony.com/doc/7.4/event_dispatcher.html
+      - title: Built-in Symfony Events
+        url: https://symfony.com/doc/7.4/reference/events.html
+      - title: The HttpKernel Component
+        url: https://symfony.com/doc/7.4/components/http_kernel.html
+
+  - name: Service container in depth
+    questions:
+      - Two classes implement the same interface. How do you control which one is injected where?
+      - How would you gather every service of one kind, such as all the export formats, into a single service?
+      - How do you add behaviour around an existing service, such as logging or caching, without changing its class?
+    key_points:
+      - "When several services implement an interface, alias the interface to the default one and choose another per argument with #[Autowire(service: ...)], #[Target] or a named autowiring alias"
+      - "Tags group services: autoconfigure adds them by interface or with #[AutoconfigureTag], and #[AutowireIterator] or #[AutowireLocator] injects every service with that tag"
+      - "Decoration with #[AsDecorator] replaces a service by a wrapper that receives the original one through #[AutowireDecorated]"
+      - The container is compiled and cached; compiler passes can change service definitions before compilation, and in production any config change needs a cache rebuild
+      - Services are shared by default; shared false creates a new instance each time, and lazy services are only built on first use
+      - Injecting the whole container hides a class's dependencies; a service locator or a service subscriber gives lazy access to a fixed list of services
+    resources:
+      - title: Defining Service Dependencies Automatically (Autowiring)
+        url: https://symfony.com/doc/7.4/service_container/autowiring.html
+      - title: Service Tags
+        url: https://symfony.com/doc/7.4/service_container/tags.html
+      - title: Service Decoration
+        url: https://symfony.com/doc/7.4/service_container/service_decoration.html
+
+  - name: Doctrine relations and performance
+    questions:
+      - Explain the owning side and the inverse side of a Doctrine relation. Why does the difference matter?
+      - A page listing 50 articles with their author runs 51 SQL queries. What is happening, and how do you fix it?
+    key_points:
+      - Doctrine supports ManyToOne/OneToMany, OneToOne and ManyToMany relations; the owning side is the one holding the foreign key, which is always the ManyToOne side
+      - Doctrine only looks at the owning side when saving, so changing only the inverse collection saves nothing; adder methods keep both sides in sync
+      - inversedBy and mappedBy link the two sides; cascade persist saves related objects, orphanRemoval deletes children removed from a collection, and onDelete on the join column sets a database-level cascade
+      - Related objects are lazy-loaded through proxies, which causes the N+1 query problem when you loop over them
+      - The fix is a fetch join in a repository method (join() plus addSelect()); the profiler's Doctrine panel shows how many queries a page runs
+      - Paginating a query that fetch-joins a collection needs Doctrine's Paginator, because LIMIT applies to SQL rows, not to entities
+      - Migrations are reviewed before being committed and never edited after they have run on another environment
+    resources:
+      - title: How to Work with Doctrine Associations / Relations
+        url: https://symfony.com/doc/7.4/doctrine/associations.html
+      - title: Databases and the Doctrine ORM
+        url: https://symfony.com/doc/7.4/doctrine.html
+
+  - name: Security, authenticators and voters
+    questions:
+      - How would you make sure that only the author of a post can edit it?
+      - How would you secure a JSON API with tokens instead of a login form?
+    key_points:
+      - "Per-object rules belong in a voter: extend Voter, say in supports() whether it handles the attribute and subject, and decide in voteOnAttribute() using the user from the token"
+      - "Voters are called by isGranted() and denyAccessUnlessGranted(), or with #[IsGranted('POST_EDIT', 'post')] where post is the controller argument; autoconfigure registers them"
+      - The access decision manager combines the votes; the default affirmative strategy grants access as soon as one voter grants it
+      - Roles fit coarse access, voters fit business rules; one voter keeps a rule in a single place instead of repeating it in controllers and templates
+      - An API firewall is usually stateless and authenticates every request, for example with the access_token authenticator and a token handler that returns a UserBadge for a valid token
+      - A custom authenticator extends AbstractAuthenticator, with supports(), authenticate() returning a Passport (a UserBadge plus credentials), onAuthenticationSuccess() and onAuthenticationFailure()
+    resources:
+      - title: How to Use Voters to Check User Permissions
+        url: https://symfony.com/doc/7.4/security/voters.html
+      - title: How to use Access Token Authentication
+        url: https://symfony.com/doc/7.4/security/access_token.html
+      - title: How to Write a Custom Authenticator
+        url: https://symfony.com/doc/7.4/security/custom_authenticator.html
+
+  - name: Messenger
+    questions:
+      - How would you send the welcome email asynchronously after a user signs up, using Messenger?
+      - A message handler keeps failing. What happens to the message, and how do you deal with it in production?
+    key_points:
+      - "A message is a plain PHP object holding data; its handler is a service marked with #[AsMessageHandler] whose __invoke() takes that message class"
+      - MessageBusInterface::dispatch() wraps the message in an Envelope; messages are handled synchronously unless they are routed to a transport
+      - The routing section of messenger.yaml sends a message class to an async transport, such as Doctrine, AMQP or Redis, configured with a DSN like MESSENGER_TRANSPORT_DSN
+      - Workers run messenger:consume; in production a process manager such as Supervisor or systemd keeps them running, with limits like --time-limit or --memory-limit
+      - Workers keep the code in memory, so a deployment runs messenger:stop-workers and lets the process manager restart them
+      - Failed messages are retried, 3 times by default with a growing delay, then moved to the failure_transport, where messenger:failed:show lists them and messenger:failed:retry retries them
+      - Messages should carry ids rather than entities, and handlers should be safe to run twice; throwing UnrecoverableMessageHandlingException skips the retries
+    resources:
+      - title: "Messenger: Sync & Queued Message Handling"
+        url: https://symfony.com/doc/7.4/messenger.html
+
+  - name: Forms and validation in depth
+    questions:
+      - When would you use a form event, and when a data transformer?
+      - How do you validate a rule that no built-in constraint covers, such as an end date that must come after the start date?
+      - How do you validate the JSON body of an API request?
+    key_points:
+      - Form events (PRE_SET_DATA, PRE_SUBMIT, SUBMIT, POST_SUBMIT) change the form based on its data, for example adding a field only when editing an existing object
+      - A data transformer converts between the value of the object and the value shown in the field, for example between an Issue entity and the issue number typed in a text field
+      - A reusable rule is a Constraint class plus a ConstraintValidator that adds violations; the Callback or Expression constraints cover one-off checks, such as comparing two fields
+      - Validation groups apply only some constraints, for example different rules on sign-up and on profile edit
+      - UniqueEntity is a class-level constraint that checks a value is not already used in the database
+      - Binding a form to a DTO rather than to the entity keeps invalid data out of managed entities
+      - "#[MapRequestPayload] deserializes the request body into a DTO, validates it and answers with a 422 response when validation fails"
+    resources:
+      - title: Form Events
+        url: https://symfony.com/doc/7.4/form/events.html
+      - title: How to Use Data Transformers
+        url: https://symfony.com/doc/7.4/form/data_transformers.html
+      - title: How to Create a Custom Validation Constraint
+        url: https://symfony.com/doc/7.4/validation/custom_constraint.html
+      - title: Controller (mapping the request payload)
+        url: https://symfony.com/doc/7.4/controller.html
+
+  - name: Testing
+    questions:
+      - How do you keep tests that use the database fast and independent from each other?
+      - How do you replace a service that calls an external API in your tests?
+    key_points:
+      - "There are three levels: unit tests (TestCase), integration tests (KernelTestCase and static::getContainer()) and application tests (WebTestCase and its client)"
+      - Tests use a dedicated database, often the normal name with a _test suffix, set in .env.test or .env.test.local
+      - DAMADoctrineTestBundle wraps each test in a transaction that is rolled back at the end, so tests don't leave data behind for the next ones
+      - Fixtures, with DoctrineFixturesBundle or factories, load known data for the tests
+      - In tests, the container also gives access to private services, and static::getContainer()->set() replaces a service with a test double
+      - External HTTP calls are faked, for example with MockHttpClient, so tests don't depend on the network
+      - Application tests use loginUser() to log in directly, and assertions such as assertEmailCount() check emails without sending them
+    resources:
+      - title: Testing
+        url: https://symfony.com/doc/7.4/testing.html
+      - title: How to Test a Doctrine Repository
+        url: https://symfony.com/doc/7.4/testing/database.html
+
+  - name: Configuration, secrets and deployment
+    questions:
+      - How do you manage secrets such as API keys across environments in Symfony?
+      - What does a production deployment of a Symfony application involve?
+    key_points:
+      - "Environment variables are read at runtime with %env()%; processors such as int:, bool:, json:, file: or default: convert them or give a fallback"
+      - Parameters are resolved when the container is compiled, while env vars are read when used, so an env var can change without rebuilding the container
+      - The secrets vault stores encrypted secrets per environment (secrets:set); the production decryption key is never committed and is deployed separately
+      - Production runs with APP_ENV=prod and APP_DEBUG=0; composer dump-env prod compiles the .env files into .env.local.php so they aren't parsed on every request
+      - A deployment installs dependencies with composer install --no-dev --optimize-autoloader, runs the migrations, clears and warms up the cache, and builds the assets
+      - when@prod keys or config/packages/prod/ hold production-only settings; debug:config shows the final configuration of a bundle
+    resources:
+      - title: Environment Variable Processors
+        url: https://symfony.com/doc/7.4/configuration/env_var_processors.html
+      - title: How to Keep Sensitive Information Secret
+        url: https://symfony.com/doc/7.4/configuration/secrets.html
+      - title: How to Deploy a Symfony Application
+        url: https://symfony.com/doc/7.4/deployment.html
