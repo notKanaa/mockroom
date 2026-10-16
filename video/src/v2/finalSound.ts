@@ -6,7 +6,7 @@
 // The effects are synthesised in code (scripts/sfx). scripts/mix.ts mixes all of
 // it into one track per language (`npm run mix`), which the film plays.
 
-import type { Locale, LocaleContent } from "../content/locales";
+import { locales, type Locale, type LocaleContent } from "../content/locales";
 import { p1, p2, p4, p5, PART1_FRAMES, PART2_FRAMES, PART3_FRAMES, PART4_FRAMES, part3Beats } from "./beats";
 
 const FPS = 30;
@@ -79,14 +79,18 @@ export function finalEffects(content: Pick<LocaleContent, "film" | "sample">): E
   return [
     // Part 1. One soft thump per heartbeat (on the pulse's peak), the words, their dissolve and the dive,
     // the coach question typed, the reels, the soft cut, the flood, the mark, the fly-through.
+    // The ring's birth is the first pulse; each later pulse peaks 2 frames after its beat, on the music's own pulse.
+    one("heartbeat-fast", at.p1 + p1.ringIn + 4, level.impact - 2),
     ...p1.beats.map((beat, index) => one("heartbeat-fast", at.p1 + beat + 2, index < 2 ? level.impact - 2 : level.whoosh + 1)),
-    one("slam", at.p1 + p1.slam + 6, level.impact - 8),
-    one("dissolve", at.p1 + p1.burst + 8, level.whoosh - 1),
+    one("slam", at.p1 + p1.slam + 3, level.impact - 3),
+    one("dissolve", at.p1 + p1.burst + 3, level.whoosh - 1),
     one("dive", at.p1 + 122, level.whoosh - 2),
     ...keystrokes(at.p1 + p1.kicker, film.problem.costKicker.length, 1.6),
     one("reel-spin", at.p1 + p1.reels, level.texture, "start"),
     ...p1.stops.map((stop) => one("reel-stop", at.p1 + stop, level.ui)),
-    one("soft-swish", at.p1 + p1.slash + 4, level.whoosh),
+    // The price cut like a katana: the slice on the slash's fastest frame, then the halves parting.
+    one("katana", at.p1 + p1.slash + 4, level.whoosh + 2),
+    one("split", at.p1 + p1.split + 2, level.whoosh - 4),
     one("flood", at.p1 + p1.flood + 9, level.whoosh),
     one("collapse", at.p1 + p1.collapse + 17, level.whoosh - 2),
     one("dock", at.p1 + p1.dock, level.impact),
@@ -136,45 +140,52 @@ export function finalEffects(content: Pick<LocaleContent, "film" | "sample">): E
 
 type Part = keyof typeof at;
 
-/** The voice-over: one short line per idea, in the film's quieter moments. `at` is in seconds from the start of its part. */
+/**
+ * The voice-over: one short line per idea. Each line starts on the picture it talks
+ * about (never before it), `at` seconds from the start of its part.
+ */
 const voiceScript: Record<Locale, { id: string; part: Part; at: number; text: string }[]> = {
   en: [
-    { id: "01", part: "p1", at: 1.0, text: "Technical interviews are stressful." },
-    { id: "02", part: "p1", at: 4.0, text: "And practising with a coach can cost up to a hundred and fifty dollars a month." },
-    { id: "03", part: "p1", at: 9.1, text: "Meet Mockroom." },
-    { id: "04", part: "p2", at: 0.6, text: "Free, open source, in English and French." },
-    { id: "05", part: "p2", at: (p2.prompt - 4) / FPS, text: "Paste a job offer…" },
+    { id: "01", part: "p1", at: p1.line1 / FPS, text: "Technical interviews are stressful." },
+    { id: "02", part: "p1", at: p1.kicker / FPS - 0.1, text: "And practising with a coach can cost up to a hundred and fifty dollars a month." },
+    { id: "03", part: "p1", at: (p1.logo + 6) / FPS, text: "Meet Mockroom." },
+    { id: "04", part: "p2", at: (p2.freeLand - 2) / FPS, text: "Free, open source, in English and French." },
+    { id: "05", part: "p2", at: p2.prompt / FPS, text: "Paste a job offer…" },
     { id: "06", part: "p2", at: p2.marks[0]! / FPS, text: "and it picks out the tech the role needs." },
-    { id: "07", part: "p3", at: 0.5, text: "An AI recruiter interviews you…" },
-    { id: "08", part: "p3", at: 5.7, text: "and digs deeper, like a real one." },
+    { id: "07", part: "p3", at: 24 / FPS, text: "An AI recruiter interviews you…" },
+    { id: "08", part: "p3", at: 0, text: "and digs deeper, like a real one." },
     { id: "09", part: "p4", at: 0.5, text: "Then you get a clear debrief: what went well, and what to review." },
-    { id: "10", part: "p5", at: 2.3, text: "Bring your own API key. It stays on your machine." },
-    { id: "11", part: "p5", at: 6.2, text: "Or run it free and offline, with Ollama." },
-    { id: "12", part: "p5", at: 8.9, text: "No account. Your interviews stay on your computer." },
-    { id: "13", part: "p5", at: 12.0, text: "Mockroom. Rehearse the interview, not the panic." },
+    { id: "10", part: "p5", at: p5.byok / FPS, text: "Bring your own API key. It stays on your machine." },
+    { id: "11", part: "p5", at: p5.ollamaLine / FPS, text: "Or run it free and offline, with Ollama." },
+    { id: "12", part: "p5", at: (p5.pill + 11) / FPS, text: "No account. Your interviews stay on your computer." },
+    { id: "13", part: "p5", at: (p5.name + 2) / FPS, text: "Mockroom. Rehearse the interview, not the panic." },
   ],
   fr: [
-    { id: "01", part: "p1", at: 1.0, text: "Les entretiens techniques, c'est stressant." },
-    { id: "02", part: "p1", at: 4.0, text: "Et s'entraîner avec un coach peut coûter jusqu'à cent cinquante dollars par mois." },
-    { id: "03", part: "p1", at: 9.1, text: "Voici Mockroom." },
+    { id: "01", part: "p1", at: p1.line1 / FPS, text: "Les entretiens techniques, c'est stressant." },
+    { id: "02", part: "p1", at: p1.kicker / FPS - 0.1, text: "Et s'entraîner avec un coach peut coûter jusqu'à cent cinquante dollars par mois." },
+    { id: "03", part: "p1", at: (p1.logo + 6) / FPS, text: "Voici Mockroom." },
     { id: "04", part: "p2", at: 0.6, text: "Gratuit, open source, en français et en anglais." },
-    { id: "05", part: "p2", at: (p2.prompt - 4) / FPS + 0.15, text: "Colle une offre d'emploi…" },
+    { id: "05", part: "p2", at: p2.prompt / FPS + 0.15, text: "Colle une offre d'emploi…" },
     { id: "06", part: "p2", at: p2.marks[0]! / FPS, text: "il repère les technos que le poste demande." },
-    { id: "07", part: "p3", at: 0.5, text: "Un recruteur IA te fait passer l'entretien…" },
-    { id: "08", part: "p3", at: 5.7, text: "et creuse, comme un vrai." },
+    { id: "07", part: "p3", at: 24 / FPS, text: "Un recruteur IA te fait passer l'entretien…" },
+    { id: "08", part: "p3", at: 0, text: "et creuse, comme un vrai." },
     { id: "09", part: "p4", at: 0.5, text: "Puis tu reçois un bilan clair : ce qui allait, et quoi réviser." },
-    { id: "10", part: "p5", at: 1.8, text: "Utilise ta propre clé d'API. Elle reste sur ta machine." },
-    { id: "11", part: "p5", at: 5.9, text: "Ou gratuit et hors ligne, avec Ollama." },
-    { id: "12", part: "p5", at: 8.6, text: "Pas de compte. Tes entretiens restent sur ton ordi." },
-    { id: "13", part: "p5", at: 11.95, text: "Mockroom. Répète l'entretien, pas la panique." },
+    { id: "10", part: "p5", at: p5.byok / FPS, text: "Utilise ta clé d'API. Elle reste sur ta machine." },
+    { id: "11", part: "p5", at: p5.ollamaLine / FPS, text: "Ou gratuit et hors ligne, avec Ollama." },
+    { id: "12", part: "p5", at: (p5.pill + 12) / FPS, text: "Pas de compte. Tes entretiens restent sur ton ordi." },
+    { id: "13", part: "p5", at: (p5.name + 10) / FPS, text: "Mockroom. Répète l'entretien, pas la panique." },
   ],
 };
 
+/** The follow-up line starts as the follow-up appears, which depends on the language's texts. */
+const followUpAt = (locale: Locale) => part3Beats(locales[locale].sample).followUp / FPS + 0.1;
+
 /** The voice-over lines with their time in the whole film, in seconds. */
 export const voiceLines: Record<Locale, { id: string; at: number; text: string }[]> = {
-  en: voiceScript.en.map((line) => ({ ...line, at: seconds(at[line.part]) + line.at })),
-  fr: voiceScript.fr.map((line) => ({ ...line, at: seconds(at[line.part]) + line.at })),
+  en: voiceScript.en.map((line) => ({ ...line, at: seconds(at[line.part]) + (line.id === "08" ? followUpAt("en") : line.at) })),
+  fr: voiceScript.fr.map((line) => ({ ...line, at: seconds(at[line.part]) + (line.id === "08" ? followUpAt("fr") : line.at) })),
 };
+
 
 /** A voice line's file, in public/audio/final/. */
 export const voiceFile = (locale: Locale, id: string) => `vo-${locale}-${id}`;

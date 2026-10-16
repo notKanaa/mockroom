@@ -9,7 +9,8 @@ export const PART1_FRAMES = 300;
 /** Every beat of the opening, in frames at 30 fps. */
 export const p1 = {
   ringIn: 4,
-  beats: [18, 34, 58, 70, 80, 88, 95, 101],
+  /** On the music's intro pulse (a hit every 0.25 s on its 120 BPM grid): each pulse peaks 2 frames later. */
+  beats: [14, 29, 44, 59, 74, 81, 89, 96],
   line1: 40,
   are: 64,
   slam: 70,
@@ -31,41 +32,41 @@ export const p1 = {
   logo: 266,
 };
 
-export const PART2_FRAMES = 390;
+export const PART2_FRAMES = 345;
 
-/** Part 2: the three promises, one every three beats of the music (120 BPM: a beat every 15 frames), then the job offer, read by the AI. */
+/** Part 2: the four promises on a 120 BPM grid (a beat every 15 frames), then the job offer, read by the AI. */
 export const p2 = {
   logoOut: 4,
   free: 15,
   freeLand: 33,
-  open: 60,
-  clap: 66,
-  mit: 75,
-  language: 105,
-  toggle: 118,
+  open: 45,
+  clap: 51,
+  mit: 60,
+  language: 75,
+  toggle: 88,
   /** The toggle's knob morphs into the prompt box. */
-  morph: 145,
+  morph: 100,
   morphFrames: 22,
-  prompt: 161,
-  caption1: 149,
+  prompt: 116,
+  caption1: 104,
   /** The job offer's words fading in, so many per frame. */
-  words: 173,
+  words: 128,
   wordsPerFrame: 1.6,
-  send: 213,
-  glow: 215,
-  sheen: 219,
-  marks: [227, 237, 247],
-  lift: [259, 263, 267],
+  send: 168,
+  glow: 170,
+  sheen: 174,
+  marks: [182, 192, 202],
+  lift: [214, 218, 222],
   liftFrames: 20,
-  recede: 267,
-  caption2: 273,
-  card: 283,
-  drop: [295, 300, 305],
+  recede: 222,
+  caption2: 228,
+  card: 238,
+  drop: [250, 255, 260],
   dropFrames: 14,
-  pack: 325,
-  summary: 337,
-  start: 363,
-  burst: 366,
+  pack: 280,
+  summary: 292,
+  start: 318,
+  burst: 321,
   burstFrames: 18,
 };
 

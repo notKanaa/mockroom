@@ -68,7 +68,7 @@ function Scene() {
   // The global camera: a slow push, shakes on impacts.
   // The camera settles completely before the logo, so part 2 picks up the very same frame.
   const settle = 1 - progress(frame, p1.through, 14, easeInOut);
-  const kick = impulse(frame, p1.slam + 2, 5) * 6 + impulse(frame, p1.dock, 5) * 16 + impulse(frame, p1.split, 4) * 10;
+  const kick = impulse(frame, p1.slam + 2, 5) * 26 + impulse(frame, p1.dock, 5) * 16 + impulse(frame, p1.split, 4) * 10;
   const drift = shake(frame, 2.5 * u * settle, "hand");
   const hit = shake(frame, kick * u, "hit");
   const push = 1 + 0.04 * progress(frame, 0, p1.burst, easeInOut) * settle;
@@ -111,33 +111,23 @@ function Opening({ cx, cy }: { cx: number; cy: number }) {
   const dive = progress(frame, p1.dive, p1.cost + 12 - p1.dive, easeIn);
   const zoom = Math.pow(26, dive);
 
-  // The words: letters come out of a blur one by one; "stressful" settles, then trembles.
-  // At the burst they drift apart and dissolve back into the blur.
+  // Line 1 slides in from the right, its letters landing one by one; line 2 slams.
+  const line1Slide = sp(frame, p1.line1, { damping: 15, stiffness: 120 });
   const burst = Math.max(0, frame - p1.burst);
-  const tremor = progress(frame, p1.slam + 10, p1.burst - p1.slam - 10, easeIn) * 2.4 * u;
+  const tremor = progress(frame, p1.slam + 6, p1.burst - p1.slam - 6, easeIn) * 5 * u;
+  const split = impulse(frame, p1.slam + 1, 5) * 16 * u + tremor * 0.6;
 
-  const reveal = (at: number, index: number, settle = 1): CSSProperties => {
-    const t = progress(frame, at + index * 0.8, 16, easeOut);
-    return {
-      opacity: t,
-      filter: `blur(${(1 - t) * 12 * u}px)`,
-      transform: `translateY(${(1 - t) * 0.28}em) scale(${mix(settle, 1, t)})`,
-    };
-  };
-  const dissolve = (index: number, count: number, line: number): CSSProperties => {
+  const scatterStyle = (index: number, count: number, line: number): CSSProperties => {
     if (burst <= 0) return {};
-    const t = Math.min(1, burst / 14);
-    const dx = (index - count / 2) / count + scatter(index, line + 1) * 0.4;
-    const dy = (line === 0 ? -0.5 : 0.5) + scatter(index, line + 7) * 0.4;
-    const travel = Math.pow(burst, 1.4) * 4 * u;
+    const dx = (index - count / 2) / count + scatter(index, line + 1) * 0.6;
+    const dy = (line === 0 ? -0.6 : 0.6) + scatter(index, line + 7) * 0.5;
+    const travel = Math.pow(burst, 1.7) * 9 * u;
     return {
       translate: `${dx * travel}px ${dy * travel}px`,
-      rotate: `${scatter(index, line + 3) * burst * 2}deg`,
-      opacity: 1 - t,
-      filter: `blur(${t * 18 * u}px)`,
+      rotate: `${scatter(index, line + 3) * burst * 9}deg`,
+      opacity: Math.max(0, 1 - burst / 12),
     };
   };
-  const merge = (...styles: CSSProperties[]): CSSProperties => Object.assign({}, ...styles);
 
   const line2Words = copy.lines[1].split(" ");
   const lastWord = line2Words.at(-1)!;
@@ -191,31 +181,53 @@ function Opening({ cx, cy }: { cx: number; cy: number }) {
         <div
           style={{
             textAlign: "center",
-            fontFamily: fonts.sans,
-            lineHeight: 1,
-            letterSpacing: "-0.045em",
+            fontFamily: fonts.display,
+            lineHeight: 0.95,
+            letterSpacing: "-0.05em",
             whiteSpace: "nowrap",
           }}
         >
-          <div style={{ fontSize: 132 * u * fit, fontWeight: 500, color: stage.muted }}>
+          <div
+            style={{
+              fontSize: 150 * u * fit,
+              fontWeight: 700,
+              color: stage.muted,
+              transform: `translateX(${(1 - line1Slide) * 900 * u}px)`,
+            }}
+          >
             <Letters
               text={copy.lines[0]}
-              letter={(index, count) => merge(reveal(p1.line1, index), dissolve(index, count, 0))}
+              letter={(index, count) => {
+                const land = sp(frame, p1.line1 + index * 0.9, { damping: 13, stiffness: 170 });
+                return {
+                  transform: `translateY(${(1 - land) * 70}%) rotate(${(1 - land) * 14}deg)`,
+                  opacity: Math.min(1, land * 1.4),
+                  ...scatterStyle(index, count, 0),
+                };
+              }}
             />
           </div>
-          <div style={{ fontSize: 184 * u * fit, fontWeight: 700, marginTop: 14 * u }}>
+          <div style={{ fontSize: 214 * u * fit, fontWeight: 800, marginTop: 6 * u }}>
             <Letters
               text={`${firstWords} `}
               style={{ color: stage.text }}
-              letter={(index, count) => merge(reveal(p1.are, index), dissolve(index, count, 1))}
+              letter={(index, count) => {
+                const pop = sp(frame, p1.are + index, { damping: 10, stiffness: 200 });
+                return { transform: `scale(${pop})`, opacity: Math.min(1, pop * 2), ...scatterStyle(index, count, 1) };
+              }}
             />
             <Letters
               text={lastWord}
-              style={{ color: stage.warn }}
+              style={{ color: stage.warn, ...rgbSplit(split) }}
               letter={(index, count) => {
+                const slam = sp(frame, p1.slam + index * 0.7, { damping: 14, stiffness: 260, mass: 0.6 });
                 const jitterX = Math.sin(frame * 2.7 + index * 1.9) * tremor;
                 const jitterY = Math.cos(frame * 3.1 + index * 2.3) * tremor * 0.6;
-                return merge(reveal(p1.slam, index, 1.12), { translate: `${jitterX}px ${jitterY}px` }, dissolve(index, count, 2));
+                return {
+                  transform: `translate(${jitterX}px, ${jitterY}px) scale(${mix(3.2, 1, slam)})`,
+                  opacity: Math.min(1, slam * 3),
+                  ...scatterStyle(index, count, 2),
+                };
               }}
             />
           </div>

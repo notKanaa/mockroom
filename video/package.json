@@ -15,7 +15,8 @@
     "stills": "node scripts/stills.mjs",
     "cues": "tsx scripts/export-cues.ts",
     "typecheck": "tsc --noEmit",
-    "mix": "tsx scripts/mix.ts"
+    "mix": "tsx scripts/mix.ts",
+    "check-timing": "tsx scripts/check-timing.ts"
   },
   "dependencies": {
     "@remotion/cli": "4.0.536",

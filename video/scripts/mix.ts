@@ -177,37 +177,6 @@ function eq(sound: Sound, low: number, high: number): Sound {
   return { left: band(sound.left), right: band(sound.right) };
 }
 
-// The music, fitted to the film
-
-/**
- * The music was composed for the film before part 2's promises were slowed down by
- * three beats. Repeating one bar of its groove there, cut on a kick, keeps every
- * later section (the break, the final build, the resolve) on its picture.
- */
-const SPLICE = { at: 12.03, length: 1.5 };
-
-function lengthen(music: Sound): Sound {
-  const at = Math.round(SPLICE.at * SR);
-  const length = Math.round(SPLICE.length * SR);
-  const fade = Math.round(0.012 * SR);
-  const out = silence(music.left.length / SR + SPLICE.length);
-  for (const [from, to] of [
-    [music.left, out.left],
-    [music.right, out.right],
-  ] as const) {
-    // The bar before the cut, played twice: its end leads straight back into what follows.
-    to.set(from.subarray(0, at), 0);
-    to.set(from.subarray(at - length, at), at);
-    to.set(from.subarray(at), at + length);
-    // Only the first seam jumps back in time: a short crossfade hides it.
-    for (let index = 0; index < fade; index++) {
-      const t = index / fade;
-      to[at + index] = from[at + index]! * (1 - t) + from[at - length + index]! * t;
-    }
-  }
-  return out;
-}
-
 // The mix
 
 /** Each synthesised effect, made once, levelled, with where its peak falls. */
@@ -241,7 +210,7 @@ function mix(locale: Locale) {
   const duck = (index: number, depth: number) => 1 - depth * Math.min(1, speaking[index]! / db(-26));
 
   // The music: one level for the whole piece, ducked under the voice and dipped for the break.
-  const musicRaw = lengthen(decode(final("music")));
+  const musicRaw = decode(final("music"));
   const musicLevel = db(-21) / Math.max(loudness(musicRaw), 1e-6);
   const music = silence(LENGTH + 1);
   for (let index = 0; index < Math.min(music.left.length, musicRaw.left.length); index++) {

@@ -437,4 +437,23 @@ export const sounds: Record<string, () => Sound> = {
     const soft: Sound = { left: filter(sound.left, "lp", () => 5000, 0.6), right: filter(sound.right, "lp", () => 5000, 0.6) };
     return master(reverb(soft, 0.3, 0.8, 0.6), -3);
   },
+
+  // A katana cutting: a fast, clean slice of air, then the blade's short ring. Mid-high
+  // partials only, softly filtered, so it reads as a blade without hurting the ear.
+  katana: () => {
+    const length = 1.1;
+    const sound = silence(length);
+    const slice = shape(filter(noise(0.16, 830), "bp", (t) => 1200 * (5200 / 1200) ** Math.min(1, t / 0.08), 1.6), (t) => (t < 0.012 ? t / 0.012 : Math.exp(-(t - 0.012) / 0.035)));
+    add(sound, slice, 0, 1, (t) => -0.7 + t * 14);
+    for (const [frequency, gain, decay] of [
+      [1650, 0.22, 0.38],
+      [2470, 0.14, 0.28],
+      [3330, 0.07, 0.18],
+    ] as const) {
+      const ring = shape(osc(length, (t) => frequency * (1 + 0.002 * Math.sin(t * 38))), (t) => (t < 0.004 ? t / 0.004 : Math.exp(-(t - 0.004) / decay)));
+      add(sound, ring, 0.018, gain, 0.25);
+    }
+    const soft: Sound = { left: filter(sound.left, "lp", () => 5500, 0.6), right: filter(sound.right, "lp", () => 5500, 0.6) };
+    return master(reverb(soft, 0.22, 0.78, 0.6), -2);
+  },
 };
