@@ -5,16 +5,17 @@
   "license": "MIT",
   "type": "module",
   "scripts": {
-    "studio": "npm run sfx && remotion studio",
+    "studio": "npm run sfx && npm run mix && remotion studio",
     "sfx": "tsx scripts/synth-sfx.ts",
     "render:film": "remotion render Film out/mockroom-promo.mp4 --codec=h264 --crf=17",
     "render:film-fr": "remotion render Film-FR out/mockroom-promo-fr.mp4 --codec=h264 --crf=17",
     "render:loop": "remotion render ReadmeLoop out/mockroom-loop.mp4 --codec=h264 --crf=20",
     "render:gif": "remotion render ReadmeLoop out/mockroom-loop.gif --codec=gif --every-nth-frame=3 --scale=0.5",
-    "render": "npm run sfx && npm run render:film && npm run render:film-fr && npm run render:loop && npm run render:gif",
+    "render": "npm run sfx && npm run mix && npm run render:film && npm run render:film-fr && npm run render:loop && npm run render:gif",
     "stills": "node scripts/stills.mjs",
     "cues": "tsx scripts/export-cues.ts",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "mix": "tsx scripts/mix.ts"
   },
   "dependencies": {
     "@remotion/cli": "4.0.536",

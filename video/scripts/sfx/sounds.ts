@@ -403,4 +403,12 @@ export const sounds: Record<string, () => Sound> = {
     layer(sound, whoosh(0.4, 400, 3000, 0.6, -0.6, 721, 0.5), 0, 0.7);
     return master(sound, -1);
   },
+
+  // The price's cut: a soft, airy swish, no metal, easy on the ear.
+  "soft-swish": () => {
+    const sound = whoosh(0.7, 600, 2600, -0.7, 0.7, 800, 0.45);
+    layer(sound, whoosh(0.7, 300, 1200, -0.4, 0.4, 801, 0.5), 0, 0.6);
+    const smooth: Sound = { left: filter(sound.left, "lp", () => 4200, 0.6), right: filter(sound.right, "lp", () => 4200, 0.6) };
+    return master(reverb(smooth, 0.25, 0.8, 0.6), -2);
+  },
 };

@@ -1,4 +1,5 @@
 node_modules/
 out/
-# Made by `npm run sfx`.
+# Made by `npm run sfx` and `npm run mix`.
 public/audio/synth/
+public/audio/mix/

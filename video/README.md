@@ -42,7 +42,7 @@ Everything goes to `out/`, which git ignores.
 | `npm run render:gif`     | `out/mockroom-loop.gif` (640×360, 10 fps, about 9 MB: prefer the MP4 in a README, GitHub plays it) |
 | `npm run stills -- Film 450 900` | PNG stills of frames 450 and 900 in `out/stills/`, to check a look quickly |
 
-Run `npm run sfx` once before rendering a single composition (`npm run render` and `npm run studio` do it for you).
+Run `npm run sfx` and `npm run mix` once before rendering a single composition (`npm run render` and `npm run studio` do it for you).
 
 ## How it's built
 
@@ -56,9 +56,16 @@ Run `npm run sfx` once before rendering a single composition (`npm run render` a
 - **Music and voice** come from [ElevenLabs](https://elevenlabs.io), in `public/audio/final/` (committed, about 2 MB): one music track for the whole film (`music.mp3`), composed in the film's sections at 120 BPM (a tense intro, a reveal on the logo, a steady groove, a break into the dark stage, a final build, a clean resolve), and a voice-over in English and French (voice "Sarah", 13 short lines each: `vo-en-01.mp3` …, `vo-fr-01.mp3` …). The music ducks under the voice.
 - **Effects** are synthesised in code: `scripts/sfx/` is a tiny synthesiser (noise, filters, envelopes, reverb), and `npm run sfx` makes its sounds into `public/audio/synth/` (gitignored; same result every time). Only about 30 hits play, each on a key beat of the picture.
 
-`src/v2/finalSound.ts` holds it all: the music brief, the effects and their beats, and the voice-over lines with their timing. To change a line, edit its text there, make the file again with ElevenLabs (same voice, `eleven_multilingual_v2`) and save it under the same name.
+**The mix.** `npm run mix` (scripts/mix.ts) mixes everything into one track per language, `public/audio/mix/mix-en.wav` and `mix-fr.wav` (gitignored), which the film plays:
 
-Without `public/audio/final/music.mp3`, the film falls back to the full sketch synthesised in code (`src/v2/cues.ts`). The parts' own compositions (`Parts/…`) always use that sketch.
+- each voice line is levelled to the same loudness and lightly compressed;
+- the music ducks under the voice through a sidechain that follows the voice itself, and drops away for the break into the dark stage;
+- each effect is levelled, then placed so that its loudest moment lands on the frame where the picture peaks (an impact lands, a move is at its fastest); continuous sounds (typing, reels) start on their frame instead. They share one bus that softens the highs, adds one small room reverb, and ducks under the voice;
+- a gentle glue compressor and a limiter (ceiling -1 dB) finish the master, at about -15 dB RMS.
+
+`src/v2/finalSound.ts` holds the plan: the music brief, every effect with the frame it hits and its level, and the voice-over lines with their timing. To change a line, edit its text there, make the file again with ElevenLabs (same voice, `eleven_multilingual_v2`), save it under the same name, and run `npm run mix`.
+
+Without the mixed track, the film falls back to the full sketch synthesised in code (`src/v2/cues.ts`). The parts' own compositions (`Parts/…`) always use that sketch.
 
 ## Remotion's license
 

@@ -3,9 +3,8 @@
 // lands on a beat of the picture, nothing plays for decoration.
 //
 // The music and the voice come from ElevenLabs and live in public/audio/final/.
-// The effects are the ones synthesised in code (scripts/sfx, `npm run sfx`, in
-// public/audio/synth/). The film uses this design when the music is there, and
-// the full synthesised sketch (cues.ts) otherwise.
+// The effects are synthesised in code (scripts/sfx). scripts/mix.ts mixes all of
+// it into one track per language (`npm run mix`), which the film plays.
 
 import type { Locale } from "../content/locales";
 import { p1, p2, p4, p5, PART1_FRAMES, PART2_FRAMES, PART3_FRAMES, PART4_FRAMES, part3Beats } from "./beats";
@@ -39,49 +38,81 @@ export const musicBrief = {
   ],
 };
 
-/** The effects on the film's timeline (frames of the whole film). */
-export function finalEffects(sample: Film["sample"]): { sound: string; frame: number; volume: number }[] {
+/**
+ * An effect on the film's timeline. `frame` is the frame where the picture peaks
+ * (an impact lands, a move is at its fastest). With `align: "hit"` (the default)
+ * the mix places the sound so that its loudest moment falls on that frame; with
+ * "start", the sound starts there (typing, a shimmer, reels spinning).
+ * `gain` is in dB, relative to the sound normalised to a common level.
+ */
+export interface Effect {
+  sound: string;
+  frame: number;
+  gain: number;
+  align?: "hit" | "start";
+}
+
+/** Levels per family, in dB: impacts lead, whooshes support, the interface stays discreet. */
+const level = { impact: -2, whoosh: -7, ui: -14, chime: -11, texture: -17 };
+
+/** The effects, each on the frame where its picture peaks (frames of the whole film). */
+export function finalEffects(sample: Film["sample"]): Effect[] {
   const p3 = part3Beats(sample);
+  const one = (sound: string, frame: number, gain: number, align: "hit" | "start" = "hit"): Effect => ({ sound, frame, gain, align });
   return [
-    // Part 1: two heartbeats, the slam, the burst and the dive, the reels, the slash, the flood, the mark.
-    { sound: "heartbeat", frame: at.p1 + p1.beats[0]!, volume: 0.8 },
-    { sound: "heartbeat", frame: at.p1 + p1.beats[1]!, volume: 0.8 },
-    { sound: "slam", frame: at.p1 + p1.slam + 1, volume: 0.8 },
-    { sound: "burst", frame: at.p1 + p1.burst, volume: 0.6 },
-    { sound: "dive", frame: at.p1 + p1.burst + 1, volume: 0.6 },
-    { sound: "reel-spin", frame: at.p1 + p1.reels, volume: 0.45 },
-    { sound: "reel-stop", frame: at.p1 + p1.stops[4]!, volume: 0.55 },
-    { sound: "slash", frame: at.p1 + p1.slash, volume: 0.7 },
-    { sound: "flood", frame: at.p1 + p1.flood, volume: 0.6 },
-    { sound: "dock", frame: at.p1 + p1.dock, volume: 0.85 },
-    { sound: "through", frame: at.p1 + p1.through - 2, volume: 0.55 },
-    // Part 2: the price lands at $0, the toggle, the offer read, the chips, the start.
-    { sound: "reel-stop", frame: at.p2 + p2.freeLand, volume: 0.5 },
-    { sound: "free-chime", frame: at.p2 + p2.freeLand + 1, volume: 0.4 },
-    { sound: "toggle", frame: at.p2 + p2.toggle, volume: 0.6 },
-    { sound: "expand", frame: at.p2 + p2.morph - 2, volume: 0.5 },
-    { sound: "click", frame: at.p2 + p2.send, volume: 0.6 },
-    { sound: "shimmer", frame: at.p2 + p2.glow, volume: 0.35 },
-    ...p2.drop.map((frame, index) => ({ sound: "chip-land", frame: at.p2 + frame + p2.dropFrames, volume: 0.5 + index * 0.02 })),
-    { sound: "click", frame: at.p2 + p2.start, volume: 0.6 },
-    { sound: "flood", frame: at.p2 + p2.burst - 2, volume: 0.45 },
-    // Part 3: the answer typed and sent, the follow-up.
-    { sound: "typing", frame: at.p3 + p3.typing, volume: 0.35 },
-    { sound: "click", frame: at.p3 + p3.send - 2, volume: 0.55 },
-    { sound: "mark", frame: at.p3 + p3.followUp, volume: 0.5 },
-    // Part 4: the debrief's chime, the next card, the fold into a file.
-    { sound: "free-chime", frame: at.p4 + p4.summary, volume: 0.55 },
-    { sound: "swap", frame: at.p4 + p4.cards[1]! - 2, volume: 0.45 },
-    { sound: "collapse", frame: at.p4 + p4.collapse - 4, volume: 0.5 },
-    // Part 5: the title, the key connected, Ollama, the implosion, the terminal, the mark.
-    { sound: "slam", frame: at.p5 + p5.title + 2, volume: 0.6 },
-    { sound: "typing", frame: at.p5 + p5.key, volume: 0.3 },
-    { sound: "free-chime", frame: at.p5 + p5.connected, volume: 0.45 },
-    { sound: "toggle", frame: at.p5 + p5.pick[3]!, volume: 0.55 },
-    { sound: "collapse", frame: at.p5 + p5.implode - 4, volume: 0.5 },
-    { sound: "typing", frame: at.p5 + p5.typing, volume: 0.4 },
-    { sound: "click", frame: at.p5 + p5.enter, volume: 0.7 },
-    { sound: "dock", frame: at.p5 + p5.mark + 8, volume: 0.85 },
+    // Part 1. The heartbeat, the slam, the burst and the dive, the reels, the soft cut, the flood, the mark, the fly-through.
+    one("heartbeat", at.p1 + p1.beats[0]! + 1, level.impact),
+    one("heartbeat", at.p1 + p1.beats[1]! + 1, level.impact),
+    ...p1.beats.slice(2).map((beat, index) => one("heartbeat-fast", at.p1 + beat + 1, level.whoosh - 4 + index)),
+    one("slam", at.p1 + p1.slam + 3, level.impact),
+    one("burst", at.p1 + p1.burst + 1, level.whoosh),
+    one("dive", at.p1 + 122, level.whoosh),
+    one("reel-spin", at.p1 + p1.reels, level.texture, "start"),
+    ...p1.stops.map((stop) => one("reel-stop", at.p1 + stop, level.ui)),
+    one("soft-swish", at.p1 + p1.slash + 4, level.whoosh),
+    one("flood", at.p1 + p1.flood + 9, level.whoosh),
+    one("collapse", at.p1 + p1.collapse + 17, level.whoosh - 2),
+    one("dock", at.p1 + p1.dock, level.impact),
+    one("through", at.p1 + p1.through + 13, level.whoosh),
+    // Part 2. $0 lands, the braces clap, the toggle, the knob morphs, the offer is read, the chips land, start.
+    one("reel-stop", at.p2 + p2.freeLand, level.ui + 2),
+    one("free-chime", at.p2 + p2.freeLand + 1, level.chime, "start"),
+    one("clap", at.p2 + p2.clap, level.ui + 4),
+    one("toggle", at.p2 + p2.toggle + 1, level.ui + 2),
+    one("expand", at.p2 + p2.morph + 14, level.whoosh - 2),
+    one("typing", at.p2 + p2.words, level.texture, "start"),
+    one("click", at.p2 + p2.send + 1, level.ui + 2),
+    one("shimmer", at.p2 + p2.glow, level.texture, "start"),
+    ...p2.marks.map((mark) => one("mark", at.p2 + mark + 4, level.ui)),
+    ...p2.drop.map((drop) => one("chip-land", at.p2 + drop + p2.dropFrames, level.ui)),
+    one("chip-land", at.p2 + p2.pack + 6, level.ui - 2),
+    one("click", at.p2 + p2.start + 2, level.ui + 2),
+    one("flood", at.p2 + p2.burst + 12, level.whoosh - 2),
+    // Part 3. The iris closes, the avatar flies to the header, the answer is typed and sent, the follow-up.
+    one("collapse", at.p3 + 14, level.whoosh - 4),
+    one("whoosh-in", at.p3 + 30, level.whoosh - 4),
+    one("typing", at.p3 + p3.typing, level.texture, "start"),
+    one("click", at.p3 + p3.send - 1, level.ui + 2),
+    one("chip-fly", at.p3 + p3.send + 6, level.ui),
+    one("mark", at.p3 + p3.followUp + 2, level.ui + 2),
+    // Part 4. Camille's notes, the next card, the fold into a file, the file landing.
+    one("free-chime", at.p4 + p4.summary + 2, level.chime, "start"),
+    one("swap", at.p4 + p4.cards[1]! + 6, level.whoosh - 4),
+    one("collapse", at.p4 + p4.collapse + 10, level.whoosh - 2),
+    one("chip-land", at.p4 + p4.file + 6, level.ui),
+    // Part 5. The title, each pick, the key typed and connected, the implosion, the terminal, Enter, the mark.
+    one("slam", at.p5 + p5.title + 3, level.impact - 3),
+    ...p5.pick.map((pick) => one("toggle", at.p5 + pick + 1, level.ui)),
+    one("typing", at.p5 + p5.key, level.texture, "start"),
+    one("click", at.p5 + p5.test + 2, level.ui + 2),
+    one("free-chime", at.p5 + p5.connected, level.chime, "start"),
+    one("collapse", at.p5 + p5.implode + 14, level.whoosh - 2),
+    one("ring-pop", at.p5 + p5.pill + 2, level.ui + 2),
+    one("expand", at.p5 + p5.terminal + 8, level.whoosh - 4),
+    one("typing", at.p5 + p5.typing, level.texture + 2, "start"),
+    one("click", at.p5 + p5.enter, level.ui + 4),
+    one("whip", at.p5 + p5.knock + 8, level.whoosh - 2),
+    one("dock", at.p5 + p5.mark + 8, level.impact),
   ];
 }
 
@@ -122,28 +153,11 @@ export const voiceLines: Record<Locale, { id: string; at: number; text: string }
 /** A voice line's file, in public/audio/final/. */
 export const voiceFile = (locale: Locale, id: string) => `vo-${locale}-${id}`;
 
-/** About how long a line takes to say, for ducking the music under it. */
-const spoken = (text: string) => 0.4 + text.length * 0.062;
-
-/** How much the voice is speaking at a time of the film (0 → 1, with soft ramps), to duck the music. */
-export function voiceActivity(locale: Locale, time: number): number {
-  let level = 0;
-  for (const line of voiceLines[locale]) {
-    const start = line.at - 0.25;
-    const end = line.at + spoken(line.text) + 0.25;
-    const ramp = 0.25;
-    const inside = Math.min(1, Math.max(0, (time - start) / ramp), Math.max(0, (end - time) / ramp));
-    level = Math.max(level, inside);
-  }
-  return level;
-}
-
-/** The music's level at a time of the film: ducked under the voice, and dipped for the break into the dark stage. */
-export function musicLevel(locale: Locale, time: number): number {
+/** 0 → 1 while the film breaks into the dark stage (end of part 4), when the music drops away. */
+export function breakDip(time: number): number {
   const breakStart = seconds(at.p4 + p4.dark) + 0.2;
   const breakEnd = seconds(at.p5) + 0.3;
-  const dip = Math.min(1, Math.max(0, (time - breakStart) / 0.4), Math.max(0, (breakEnd - time) / 0.3));
-  return 0.8 * (1 - 0.55 * voiceActivity(locale, time)) * (1 - 0.75 * dip);
+  return Math.min(1, Math.max(0, (time - breakStart) / 0.4), Math.max(0, (breakEnd - time) / 0.3));
 }
 
 export { seconds };
