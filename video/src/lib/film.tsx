@@ -28,6 +28,7 @@ export function FilmProvider({ value, children }: { value: FilmProps; children: 
 }
 
 export interface Film extends LocaleContent {
+  locale: Locale;
   aspect: Aspect;
   width: number;
   height: number;
@@ -44,6 +45,7 @@ export function useFilm(): Film {
   const { width, height } = useVideoConfig();
   return {
     ...locales[locale],
+    locale,
     aspect,
     width,
     height,
